@@ -55,6 +55,15 @@ which ship only 4.1, create a pkg-config alias (APIs are identical):
 
 and prefix builds with `PKG_CONFIG_PATH=~/pkgconfig-shim`.
 
+Rocky / Fedora / RHEL
+
+    sudo dnf install webkit2gtk4.1-devel gtk3-devel pkgconf-pkg-config gcc make
+
+    mkdir -p ~/pkgconfig-shim
+    PC=/usr/lib64/pkgconfig
+    cp "$PC/webkit2gtk-4.1.pc"        ~/pkgconfig-shim/webkit2gtk-4.0.pc
+    cp "$PC/javascriptcoregtk-4.1.pc" ~/pkgconfig-shim/javascriptcoregtk-4.0.pc
+
 ## Certified mode of operation
 
 OpinEd's certified mode is the **sole-author, OpinEd-only repository**:
