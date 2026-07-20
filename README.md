@@ -36,14 +36,17 @@ Full CommonMark core plus the four GFM extensions:
 
 ## Prerequisites (Linux)
 
-- Go 1.22 or newer
-- GCC / pkg-config (cgo is required by the webview bindings)
+- Go 1.22 or newer (Debian/Ubuntu's packaged `golang-go` is often older than
+  this; install from https://go.dev/dl/ if `go version` disagrees)
+- GCC and g++ / pkg-config (cgo is required by the webview bindings, and
+  webview_go compiles its C++ core with `-std=c++11`)
 - GTK 3 and WebKit2GTK development headers
 - The `zenity` binary (used for native file dialogs)
 
 Debian / Ubuntu:
 
-    sudo apt install build-essential pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev zenity
+    sudo apt install build-essential pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev \
+                     zenity curl unzip
 
 Note: webview_go's cgo line pins `webkit2gtk-4.0`. On Ubuntu 24.04+/Debian 13,
 which ship only 4.1, create a pkg-config alias (APIs are identical):
@@ -53,7 +56,8 @@ which ship only 4.1, create a pkg-config alias (APIs are identical):
     cp "$PC/webkit2gtk-4.1.pc"        ~/pkgconfig-shim/webkit2gtk-4.0.pc
     cp "$PC/javascriptcoregtk-4.1.pc" ~/pkgconfig-shim/javascriptcoregtk-4.0.pc
 
-and prefix builds with `PKG_CONFIG_PATH=~/pkgconfig-shim`, which the makefile defaults.
+and prefix direct `go build` invocations with `PKG_CONFIG_PATH=~/pkgconfig-shim`;
+`make` already defaults it.
 
 Fedora / RHEL
 
@@ -64,7 +68,8 @@ Fedora / RHEL
     cp "$PC/webkit2gtk-4.1.pc"        ~/pkgconfig-shim/webkit2gtk-4.0.pc
     cp "$PC/javascriptcoregtk-4.1.pc" ~/pkgconfig-shim/javascriptcoregtk-4.0.pc
 
-and prefix builds with `PKG_CONFIG_PATH=~/pkgconfig-shim`, which the makefile defaults.
+and prefix direct `go build` invocations with `PKG_CONFIG_PATH=~/pkgconfig-shim`;
+`make` already defaults it.
 
 ## Certified mode of operation
 
@@ -100,7 +105,6 @@ before `make install`.
 ## Build
 
     cd OpinEd
-    go mod init OpinEd    # first time only
     go mod tidy
     PKG_CONFIG_PATH=~/pkgconfig-shim go build -o OpinEd .
 
