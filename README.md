@@ -36,7 +36,7 @@ Full CommonMark core plus the four GFM extensions:
 
 ## Prerequisites (Linux)
 
-- Go 1.21 or newer
+- Go 1.22 or newer
 - GCC / pkg-config (cgo is required by the webview bindings)
 - GTK 3 and WebKit2GTK development headers
 - The `zenity` binary (used for native file dialogs)
@@ -53,16 +53,18 @@ which ship only 4.1, create a pkg-config alias (APIs are identical):
     cp "$PC/webkit2gtk-4.1.pc"        ~/pkgconfig-shim/webkit2gtk-4.0.pc
     cp "$PC/javascriptcoregtk-4.1.pc" ~/pkgconfig-shim/javascriptcoregtk-4.0.pc
 
-and prefix builds with `PKG_CONFIG_PATH=~/pkgconfig-shim`.
+and prefix builds with `PKG_CONFIG_PATH=~/pkgconfig-shim`, which the makefile defaults.
 
-Rocky / Fedora / RHEL
+Fedora / RHEL
 
-    sudo dnf install webkit2gtk4.1-devel gtk3-devel pkgconf-pkg-config gcc make
+    sudo dnf install webkit2gtk4.1-devel gtk3-devel pkgconf-pkg-config gcc gcc-c++ make zenity curl unzip golang
 
     mkdir -p ~/pkgconfig-shim
     PC=/usr/lib64/pkgconfig
     cp "$PC/webkit2gtk-4.1.pc"        ~/pkgconfig-shim/webkit2gtk-4.0.pc
     cp "$PC/javascriptcoregtk-4.1.pc" ~/pkgconfig-shim/javascriptcoregtk-4.0.pc
+
+and prefix builds with `PKG_CONFIG_PATH=~/pkgconfig-shim`, which the makefile defaults.
 
 ## Certified mode of operation
 
