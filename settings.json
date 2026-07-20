@@ -1,0 +1,24 @@
+{
+  "$comment": "Shared Claude Code project settings for OpinEd. Personal overrides go in settings.local.json (gitignored). Adjust permissions to taste; these are conservative starting points that allow the normal build/verify loop without broad shell access.",
+  "permissions": {
+    "allow": [
+      "Bash(make)",
+      "Bash(make debug)",
+      "Bash(make vendor-harper)",
+      "Bash(make vendor-vale)",
+      "Bash(go build:*)",
+      "Bash(go vet:*)",
+      "Bash(gofmt:*)",
+      "Bash(node --check:*)",
+      "Bash(git status)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(./OpinEd:*)"
+    ],
+    "ask": [
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(rm:*)"
+    ]
+  }
+}

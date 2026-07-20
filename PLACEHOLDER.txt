@@ -1,0 +1,5 @@
+Vale is not vendored yet. Run `make vendor-vale` from the project root
+(needs curl, tar, unzip), then rebuild (`make`). This places the vale
+binary and the Google, Microsoft, and write-good style packages here.
+The app works without these files; Audit > Vale will report itself
+unavailable until they exist.

@@ -1,0 +1,31 @@
+# Build output
+/OpinEd
+*.o
+*.a
+
+# Vendored runtime payloads (fetched by `make vendor-*`; placeholders are
+# committed under assets/, real binaries/WASM are not)
+/assets/harper/*.wasm
+/assets/harper/*.js
+/assets/vale/vale
+/assets/vale/styles/
+!/assets/harper/PLACEHOLDER.txt
+!/assets/vale/PLACEHOLDER.txt
+
+# Download / transport artifacts from the authoring environment
+# (see docs/QUIRKS.md — these recreate container paths or duplicate sources)
+/files/
+/mnt/
+
+# Editor / OS cruft
+*.swp
+*~
+.DS_Store
+
+# Local scratch
+/tmp/
+*.log
+
+# Claude Code local state (project settings are shared; local overrides and
+# session data are not)
+.claude/settings.local.json

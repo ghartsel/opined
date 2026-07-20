@@ -1,0 +1,3244 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>OpinEd</title>
+<style>
+  /* Tool chrome modeled on Oxygen's Author mode: flat gray toolbar,
+     white "page" centered on a neutral workspace, status bar below. */
+  :root {
+    --chrome-bg: #ececec;
+    --chrome-border: #c8c8c8;
+    --btn-hover: #dcdcdc;
+    --btn-active: #cfe3f5;
+    --workspace-bg: #b8bcc0;
+    --menu-bg: #ffffff;
+    --page-bg: #fffff8;          /* Tufte off-white */
+    --page-text: #111111;
+    --text: #1e1e1e;
+    --muted: #57606a;
+    --rule: #d0d7de;
+    --rule-faint: #e8e8e8;
+    --code-bg: #f6f8fa;
+    --code-inline-text: #333333;
+    --code-block-text: #4d4d4d;
+    --zebra: #f6f6ef;
+    --link: #0969da;
+    --danger: #a33d3d;
+    --warn: #9a6700;
+    --success: #1a7f37;
+    --banner-bg: #fbf3d5;
+    --banner-border: #e3d9ac;
+    --banner-text: #6b5d1f;
+    --mark-find: rgba(255, 213, 74, .40);
+    --mark-find-cur: rgba(255, 140, 0, .45);
+    --mark-find-cur-outline: rgba(200, 90, 0, .8);
+    --mark-grammar: rgba(40, 100, 220, .75);
+    --mark-spelling: rgba(200, 40, 40, .8);
+    --mark-vale: rgba(150, 80, 220, .8);
+    --mark-audit: rgba(120, 80, 220, .22);
+    --mark-audit-outline: rgba(120, 80, 220, .55);
+  }
+  /* Dark palette: tufte-css's dark scheme for the page (dark parchment,
+     not pure black), GitHub dark for GitHub-styled elements (links,
+     tables). Overlay marks get their own alpha/hue tuning: light-theme
+     translucents over light text on a dark page lose all contrast. */
+  body[data-theme="dark"] {
+    --chrome-bg: #2b2b2b;
+    --chrome-border: #454545;
+    --btn-hover: #3a3a3a;
+    --btn-active: #2f4a63;
+    --workspace-bg: #1b1c1e;
+    --menu-bg: #333333;
+    --page-bg: #151515;
+    --page-text: #dddddd;
+    --text: #dddddd;
+    --muted: #9aa0a6;
+    --rule: #444444;
+    --rule-faint: #333333;
+    --code-bg: #1e2228;
+    --code-inline-text: #b8b8b8;
+    --code-block-text: #a0a0a0;
+    --zebra: #1a1a1a;
+    --link: #58a6ff;
+    --danger: #e06c75;
+    --warn: #d4a53f;
+    --success: #56b366;
+    --banner-bg: #3a3520;
+    --banner-border: #55502e;
+    --banner-text: #d6c67a;
+    --mark-find: rgba(255, 200, 60, .30);
+    --mark-find-cur: rgba(255, 150, 40, .40);
+    --mark-find-cur-outline: rgba(255, 170, 60, .8);
+    --mark-grammar: rgba(96, 150, 255, .9);
+    --mark-spelling: rgba(255, 99, 99, .9);
+    --mark-vale: rgba(190, 130, 255, .9);
+    --mark-audit: rgba(190, 140, 255, .22);
+    --mark-audit-outline: rgba(190, 140, 255, .6);
+  }
+  * { box-sizing: border-box; }
+  /* The `hidden` attribute must always win, even over rules like
+     #modal-backdrop { display: flex } whose ID specificity would otherwise
+     override the browser's built-in [hidden] { display: none }. */
+  [hidden] { display: none !important; }
+  html, body {
+    margin: 0; height: 100%;
+    font-family: "DejaVu Sans", "Liberation Sans", sans-serif;
+    color: var(--text);
+  }
+  body { display: flex; flex-direction: column; }
+
+  /* ---- Toolbar ---- */
+  #toolbar {
+    display: flex; align-items: center; gap: 2px; flex-wrap: wrap;
+    padding: 4px 6px;
+    background: var(--chrome-bg);
+    border-bottom: 1px solid var(--chrome-border);
+    user-select: none;
+    flex: 0 0 auto;
+  }
+  #toolbar .sep {
+    width: 1px; height: 22px; margin: 0 6px;
+    background: var(--chrome-border);
+  }
+  #toolbar button, #toolbar select {
+    min-width: 30px; height: 28px; padding: 0 7px;
+    border: 1px solid transparent; border-radius: 3px;
+    background: transparent; color: var(--text);
+    font-size: 13px; cursor: pointer;
+  }
+  #toolbar select {
+    border-color: var(--chrome-border); color: var(--text);
+    /* appearance:none disarms the NATIVE control painter, which otherwise
+       ignores CSS background (leaving light text on a native white control
+       in dark mode) -- and supplies our own dropdown chevron in its place */
+    -webkit-appearance: none; appearance: none;
+    background: var(--menu-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23888888' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 6px center;
+    padding: 0 22px 0 8px;
+  }
+  #toolbar select option { background: var(--menu-bg); color: var(--text); }
+  #toolbar button:hover:not(:disabled) { background: var(--btn-hover); border-color: var(--chrome-border); }
+  #toolbar button:active:not(:disabled) { background: var(--btn-active); }
+  #toolbar button:disabled { color: #999; cursor: default; }
+  #toolbar button b { font-weight: 700; }
+  #toolbar button i { font-style: italic; }
+  #toolbar button s { text-decoration: line-through; }
+  #toolbar button code { font-family: monospace; font-size: 12px; }
+  #toolbar button:focus-visible, #toolbar select:focus-visible { outline: 2px solid #4a90d9; outline-offset: -2px; }
+
+  /* ---- Dropdown menus (File, Help) ---- */
+  .menu-wrap { position: relative; }
+  /* the theme button carries the push to the right edge; reload, find, Help follow */
+  #btn-theme { margin-left: auto; }
+  #btn-theme svg, #btn-notes svg, #btn-reload svg, #btn-find svg { display: block; }
+  /* the icon shows what clicking switches TO: moon in light, sun in dark */
+  #btn-theme .icon-sun { display: none; }
+  body[data-theme="dark"] #btn-theme .icon-sun { display: block; }
+  body[data-theme="dark"] #btn-theme .icon-moon { display: none; }
+  .menu {
+    position: absolute; left: 0; top: 30px; z-index: 20;
+    min-width: 190px;
+    background: var(--menu-bg);
+    border: 1px solid var(--chrome-border); border-radius: 4px;
+    box-shadow: 0 3px 10px rgba(0,0,0,.25);
+    padding: 4px 0;
+  }
+  .menu-wrap.right .menu { left: auto; right: 0; }
+  .menu button {
+    display: block; width: 100%; text-align: left;
+    border: 0; border-radius: 0; height: 30px; padding: 0 14px;
+  }
+  .menu button:hover:not(:disabled) { background: var(--btn-hover); }
+  .menu button:disabled { color: #999; cursor: default; }
+  /* Tools menu: a uniform check gutter so all labels align; the toggle's
+     checkmark is absolutely positioned inside the gutter instead of
+     occupying inline space (which indented only the toggleable item). */
+  #tools-menu button { position: relative; padding-left: 30px; }
+  #harper-check { position: absolute; left: 12px; }
+  #harper-check.off { visibility: hidden; }
+  .menu button .kbd {
+    float: right; margin-left: 28px;
+    color: var(--muted); font-size: 11px;
+  }
+
+  /* ---- Find bar (hidden until Ctrl+F; [hidden] rule handles display) ---- */
+  #findbar {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 10px;
+    background: var(--chrome-bg);
+    border-bottom: 1px solid var(--chrome-border);
+    flex: 0 0 auto;
+  }
+  #find-input {
+    width: 260px; height: 26px; padding: 0 8px;
+    border: 1px solid var(--chrome-border); border-radius: 3px;
+    font-size: 13px; font-family: inherit;
+    background: var(--menu-bg); color: var(--text);
+  }
+  #find-count { font-size: 12px; color: var(--muted); min-width: 80px; }
+  #find-count.none { color: var(--danger); }
+  #findbar button {
+    min-width: 26px; height: 26px; padding: 0 6px;
+    border: 1px solid transparent; border-radius: 3px;
+    background: transparent; color: var(--text);
+    cursor: pointer; font-size: 12px;
+  }
+  #findbar button:hover { background: var(--btn-hover); border-color: var(--chrome-border); }
+
+  /* Search highlights: painted as translucent boxes in an overlay layer
+     that sits over (but outside) the editable document. The document DOM
+     is never touched, and clearing is plain node removal -- immune to the
+     CSS Custom Highlight API repaint bugs in some WebKitGTK builds. */
+  #page-wrap { position: relative; }
+  #find-overlay {
+    position: absolute; inset: 0;
+    pointer-events: none;   /* clicks pass through to the editor */
+    z-index: 5;
+  }
+  .find-hit {
+    position: absolute;
+    background: var(--mark-find);
+    border-radius: 2px;
+  }
+  .find-hit.current {
+    background: var(--mark-find-cur);
+    outline: 1px solid var(--mark-find-cur-outline);
+  }
+  /* Harper lint marks: 2px underline bars in the overlay; red = spelling,
+     blue = grammar/style/other. Same no-DOM-mutation approach as find. */
+  #lint-overlay {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    z-index: 4;
+  }
+  .lint-hit {
+    position: absolute; height: 2px; border-radius: 1px;
+    background: var(--mark-grammar);
+  }
+  .lint-hit.spelling { background: var(--mark-spelling); }
+  .lint-hit.vale { background: var(--mark-vale); }
+  /* Document-audit locate pulse: brief highlight when a finding is clicked */
+  #audit-overlay {
+    position: absolute; inset: 0;
+    pointer-events: none; z-index: 6;
+  }
+  .audit-hit {
+    position: absolute; border-radius: 3px;
+    background: var(--mark-audit);
+    outline: 2px solid var(--mark-audit-outline);
+  }
+  /* Audit results list in the modal */
+  .audit-stats { margin: 0 0 10px; color: var(--muted); font-size: 13px; white-space: pre-line; }
+  .audit-finding {
+    display: block; width: 100%; text-align: left;
+    border: 0; background: transparent; cursor: pointer;
+    color: var(--text);   /* buttons don't inherit color; UA default is dark */
+    padding: 5px 8px; border-radius: 3px; font-size: 13px; line-height: 1.4;
+  }
+  .audit-finding:hover { background: var(--btn-hover); }
+  .audit-finding .sev { font-weight: 700; margin-right: 6px; }
+  .audit-finding .sev.error { color: var(--danger); }
+  .audit-finding .sev.warn  { color: var(--warn); }
+  .audit-finding .sev.info  { color: var(--muted); }
+  .audit-none { color: var(--success); font-size: 13px; }
+
+  /* ---- Modal dialogs (Help content) ---- */
+  #modal-backdrop {
+    position: fixed; inset: 0; z-index: 30;
+    background: rgba(0,0,0,.4);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #modal {
+    background: var(--menu-bg); color: var(--text); border-radius: 6px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.4);
+    min-width: 380px; max-width: 560px; max-height: 80vh;
+    display: flex; flex-direction: column;
+  }
+  #modal header {
+    padding: 10px 16px; font-weight: 700; font-size: 15px;
+    border-bottom: 1px solid var(--rule);
+  }
+  #modal-body { padding: 14px 16px; overflow-y: auto; font-size: 13px; line-height: 1.5; }
+  #modal footer {
+    padding: 8px 16px; text-align: right;
+    border-top: 1px solid var(--rule);
+  }
+  #modal footer button {
+    height: 28px; padding: 0 16px; cursor: pointer;
+    border: 1px solid var(--chrome-border); border-radius: 3px;
+    background: var(--chrome-bg); color: var(--text);
+  }
+  #modal footer button:hover { background: var(--btn-hover); }
+  .kbd-table { border-collapse: collapse; width: 100%; }
+  .kbd-table td { padding: 3px 10px 3px 0; vertical-align: top; }
+  .kbd-table kbd {
+    font-family: "DejaVu Sans Mono", monospace; font-size: 12px;
+    background: var(--code-bg); border: 1px solid var(--rule);
+    border-radius: 3px; padding: 1px 5px; white-space: nowrap;
+  }
+  /* Special Characters dialog (LibreOffice-style subset dropdown + grid) */
+  .charmap-top {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+  }
+  #charmap-block {
+    height: 26px; font-size: 13px;
+    border: 1px solid var(--chrome-border); border-radius: 3px;
+    -webkit-appearance: none; appearance: none;
+    background: var(--menu-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23888888' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 6px center;
+    padding: 0 22px 0 8px;
+    color: var(--text);
+  }
+  #charmap-block option { background: var(--menu-bg); color: var(--text); }
+  #charmap-info {
+    font-size: 13px; color: var(--muted);
+    font-family: "DejaVu Sans", sans-serif;
+    min-width: 10em;
+  }
+  #charmap-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(34px, 1fr));
+    gap: 2px;
+    max-height: 46vh; overflow-y: auto;
+    border: 1px solid var(--rule); border-radius: 3px; padding: 4px;
+  }
+  #charmap-grid button {
+    height: 34px; font-size: 17px; line-height: 1;
+    border: 1px solid transparent; border-radius: 3px;
+    background: transparent; color: var(--text); cursor: pointer;
+    font-family: "DejaVu Sans", "Noto Sans", "Noto Sans Symbols", sans-serif;
+  }
+  #charmap-grid button:hover { background: var(--btn-active); border-color: var(--chrome-border); }
+  #modal-body .about-name { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+  #modal-body .about-muted { color: var(--muted); }
+
+  /* ---- Front-matter banner ---- */
+  #fm-banner {
+    display: flex; align-items: center; gap: 6px;
+    padding: 3px 10px; flex: 0 0 auto;
+    background: var(--banner-bg); border-bottom: 1px solid var(--banner-border);
+    font-size: 12px; color: var(--banner-text);
+  }
+  #fm-banner button {
+    border: 0; background: none; padding: 0;
+    color: var(--link); cursor: pointer; font-size: 12px;
+    text-decoration: underline;
+  }
+  .fm-edit {
+    width: 100%; min-height: 34vh; resize: vertical; box-sizing: border-box;
+    font-family: "Liberation Mono", "DejaVu Sans Mono", monospace;
+    font-size: 12px; line-height: 1.5;
+    background: var(--code-bg); color: var(--text);
+    border: 1px solid var(--chrome-border); border-radius: 4px;
+    padding: 8px;
+  }
+  /* Opaque component: read-only verbatim region shown as source.
+     Scoped under #editor: these must OUTRANK the #editor pre code-block
+     rule (id+element beats a bare class), whose smaller top padding was
+     letting the label overlap the first content line. */
+  #editor pre.opaque-sc {
+    font-family: "Liberation Mono", "DejaVu Sans Mono", monospace;
+    font-size: 12px; line-height: 1.5;
+    background: var(--code-bg); color: var(--code-block-text);
+    border: 1px dashed var(--chrome-border); border-radius: 6px;
+    padding: 30px 12px 10px; margin: 1em 0;
+    white-space: pre; overflow-x: auto;
+    cursor: pointer; position: relative;
+  }
+  #editor pre.opaque-sc::before {
+    content: "component: " attr(data-name) " \2014 click to edit raw";
+    position: absolute; top: 7px; left: 12px;
+    font-family: -apple-system, "Segoe UI", "DejaVu Sans", sans-serif;
+    font-size: 11px; font-style: italic; color: var(--muted);
+  }
+  #editor pre.opaque-sc:hover { border-color: var(--link); }
+
+  /* Notes: Tufte-margin cards + heading badges, all overlay (the
+     transient-UI-never-mutates-document-DOM invariant). Cards accept
+     pointer events individually; the layer itself does not. */
+  #notes-overlay {
+    position: absolute; inset: 0;
+    pointer-events: none; z-index: 7;
+  }
+  /* While notes are visible, the sheet hugs the left so the right margin
+     becomes a real gutter instead of forcing a horizontal scroll. */
+  body.notes-margin #editor { margin: 0 0 0 20px; }
+  .note-card {
+    position: absolute; width: 195px;
+    pointer-events: auto; cursor: pointer;
+    background: var(--menu-bg); color: var(--text);
+    border: 1px solid var(--chrome-border); border-left: 3px solid var(--link);
+    border-radius: 4px; padding: 7px 9px;
+    font-size: 12px; line-height: 1.45;
+    box-shadow: 0 1px 4px rgba(0,0,0,.12);
+    white-space: pre-wrap; overflow-wrap: break-word;
+  }
+  .note-card:hover { border-color: var(--link); }
+  .note-card .note-anchor {
+    display: block; font-size: 10px; color: var(--muted);
+    margin-bottom: 3px; font-style: italic;
+  }
+  .note-card.orphan { border-left-color: var(--warn); }
+  .note-badge {
+    position: absolute; pointer-events: auto; cursor: pointer;
+    font-size: 11px; line-height: 1; color: var(--link);
+  }
+  .note-badge.orphan { color: var(--warn); }
+
+  .fm-err {
+    margin-top: 8px; font-size: 12px; color: var(--danger);
+    white-space: pre-wrap;
+    font-family: "Liberation Mono", "DejaVu Sans Mono", monospace;
+  }
+  .fm-edit-row { margin-top: 10px; display: flex; justify-content: flex-end; }
+  .fm-edit-row button {
+    height: 28px; padding: 0 16px; cursor: pointer;
+    border: 1px solid var(--chrome-border); border-radius: 3px;
+    background: var(--chrome-bg); color: var(--text);
+  }
+  .fm-view {
+    font-family: "Liberation Mono", "DejaVu Sans Mono", monospace;
+    font-size: 12px; white-space: pre-wrap;
+    background: var(--code-bg); border-radius: 4px;
+    padding: 10px; max-height: 50vh; overflow: auto;
+  }
+
+  /* ---- Workspace / page ---- */
+  #workspace {
+    flex: 1 1 auto; overflow-y: auto;
+    background: var(--workspace-bg);
+    padding: 24px 0;
+  }
+  #editor {
+    background: var(--page-bg);
+    color: var(--page-text);
+    max-width: 760px; min-height: calc(100% - 8px);
+    margin: 0 auto; padding: 52px 84px;
+    box-shadow: 0 1px 6px rgba(0,0,0,.35);
+    outline: none;
+    /* et-book if installed locally, then tufte.css's serif fallbacks */
+    font-family: "et-book", "ETBembo", Palatino, "Palatino Linotype",
+                 "URW Palladio L", "P052", "Book Antiqua", Georgia, serif;
+    font-size: 18px; line-height: 1.5;
+    word-wrap: break-word;
+  }
+
+  /* ---- Semantic (WYSIWYG) rendering of GFM constructs, Tufte style ----
+     Sizes/weights follow tufte.css ratios: headings are light (400),
+     h2/h3 italic, no rule under headings. h4-h6 exist in GFM but exceed
+     Tufte's h3 ceiling; they are styled minimally, not endorsed. */
+  #editor h1 { font-size: 2.3em;  font-weight: 400; font-style: normal; margin: 1em 0 .5em; }
+  #editor h2 { font-size: 1.55em; font-weight: 400; font-style: italic; margin: 1.2em 0 .5em; }
+  #editor h3 { font-size: 1.2em;  font-weight: 400; font-style: italic; margin: 1.2em 0 .5em; }
+  #editor h4 { font-size: 1.05em; font-weight: 400; font-style: italic; margin: 1em 0 .4em; }
+  #editor h5 { font-size: 1em;    font-weight: 400; font-style: italic; margin: 1em 0 .4em; }
+  #editor h6 { font-size: 1em;    font-weight: 400; font-style: italic; margin: 1em 0 .4em; color: var(--muted); }
+  #editor p  { margin: .8em 0; }
+  #editor ol, #editor ul { margin: .8em 0; padding-left: 2em; }
+  #editor ol { list-style: decimal; }
+  #editor ul { list-style: disc; }
+  #editor li { margin: .2em 0; }
+  #editor strong, #editor b { font-weight: 700; }
+  #editor em, #editor i { font-style: italic; }
+  #editor del, #editor s, #editor strike { text-decoration: line-through; }
+
+  /* Links: GitHub style -- accent blue, underline only on hover */
+  #editor a { color: var(--link); text-decoration: none; }
+  #editor a:hover { text-decoration: underline; }
+
+  /* Tufte: quotes are set off by indentation alone -- no bar, no graying */
+  #editor blockquote {
+    margin: 1em 2.5em 1em 1.6em; padding: 0;
+    border: 0; color: inherit;
+  }
+
+  /* Tufte code: monospace, plain -- no background boxes or borders.
+     Font stack follows tufte.css (Consolas ... Courier). */
+  #editor code {
+    font-family: "DejaVu Sans Mono", "Liberation Mono", "Ubuntu Mono",
+                 Menlo, Consolas, "Courier New", monospace;
+    font-weight: 400;
+    font-size: .85em;
+    color: var(--code-inline-text);
+    background: none; padding: 0; border-radius: 0;
+  }
+  /* Code blocks: light gray box (same --code-bg the table header uses),
+     long lines scroll horizontally rather than wrap. Weight is pinned to
+     400 and native Linux monospace faces are listed first: substituting a
+     missing first-choice font (e.g. Consolas) can produce a synthetically
+     emboldened match that reads darker than the surrounding text. */
+  #editor pre {
+    background: var(--code-bg);
+    border: 0; border-radius: 4px;
+    padding: 12px 14px; margin: 1em 0;
+    overflow-x: auto;
+    /* Liberation Mono first: a lighter-stroked face than DejaVu Sans Mono */
+    font-family: "Liberation Mono", "DejaVu Sans Mono", "Ubuntu Mono",
+                 Menlo, Consolas, "Courier New", monospace;
+    font-weight: 400;
+    font-synthesis: none;   /* never fake a bold if a weight is missing */
+    color: var(--code-block-text);
+    /* Integer px, verified by live-inspection: at 14px+ this face rasterizes
+       with heavy stems on the target system ("fake bold"); 13px and below
+       renders at the intended weight. Keep integer sizes: fractional sizes
+       (e.g. .85em = 15.3px) trigger the same hinting stem-darkening.
+       The value comes from config.toml ([editor] code_font_size, default
+       11, clamped 8-24 on the Go side); 13px is only the pre-config
+       fallback for the first paint. */
+    font-size: var(--code-font-size, 13px); line-height: 1.5;
+    white-space: pre;
+  }
+  /* The <code> inside <pre> would otherwise match the INLINE #editor code
+     rule and steal its color/font -- inherit from pre so block styling is
+     fully decoupled from inline-code styling. */
+  #editor pre code {
+    font-family: inherit; font-weight: inherit; color: inherit;
+    font-synthesis: none;
+    font-size: 1em;
+  }
+
+  /* Tables: GitHub structure (full cell borders, header fill, zebra
+     striping, bold headers) -- but the typeface is inherited from #editor,
+     so table text stays in the Tufte serif. */
+  #editor table { border-collapse: collapse; margin: 1em 0; }
+  #editor th, #editor td {
+    border: 1px solid var(--rule);
+    padding: 5px 14px; min-width: 2.5em;
+    text-align: left;
+  }
+  #editor th { background: var(--code-bg); font-weight: 700; font-style: normal; }
+  #editor tbody tr:nth-child(2n) { background: var(--zebra); }
+
+  #editor img { max-width: 100%; }
+
+  /* Hairline rule, not a gray bar */
+  #editor hr {
+    border: 0; border-top: 1px solid var(--page-text);
+    height: 0; margin: 1.6em 0;
+  }
+
+  /* task lists: hide the bullet, align the checkbox */
+  #editor li.task-list-item { list-style: none; margin-left: -1.3em; }
+  #editor li:has(> input[type=checkbox]) { list-style: none; margin-left: -1.3em; }
+  #editor input[type=checkbox] { margin-right: .5em; vertical-align: middle; }
+
+  /* ---- Status bar ---- */
+  #status {
+    flex: 0 0 auto;
+    display: flex; justify-content: space-between;
+    padding: 3px 10px;
+    background: var(--chrome-bg);
+    border-top: 1px solid var(--chrome-border);
+    font-size: 12px; color: var(--muted);
+  }
+  #status .dirty { color: var(--danger); font-weight: 700; }
+  #status-msg.err { color: var(--danger); }
+  #status-msg.ok { color: var(--success); }
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <div class="menu-wrap">
+    <button id="btn-file" title="File operations">File &#9662;</button>
+    <div id="file-menu" class="menu" hidden>
+      <button id="file-new">New <span class="kbd">Ctrl+N</span></button>
+      <button id="file-open">Open&hellip; <span class="kbd">Ctrl+O</span></button>
+      <button id="file-save">Save <span class="kbd">Ctrl+S</span></button>
+      <button id="file-saveas">Save As&hellip; <span class="kbd">Ctrl+Shift+S</span></button>
+      <button id="file-exit">Exit</button>
+    </div>
+  </div>
+  <div class="menu-wrap">
+    <button id="btn-tools" title="Checkers and document audits">Audit &#9662;</button>
+    <div id="tools-menu" class="menu" hidden>
+      <button id="tool-harper"><span id="harper-check">&#10003;</span> Spelling &amp; grammar</button>
+      <button id="tool-vale">Vale</button>
+      <button id="tool-audit">SEO</button>
+      <button id="tool-ai-audit">AI readability</button>
+      <button id="tool-tufte">Tufte</button>
+    </div>
+  </div>
+  <div class="sep"></div>
+  <select id="block-select" title="Block format (Ctrl+0..3)">
+    <option value="p">Paragraph</option>
+    <option value="h1">Heading 1</option>
+    <option value="h2">Heading 2</option>
+    <option value="h3">Heading 3</option>
+    <!-- Tufte style stops at h3. H4-H6 are valid GFM, so they must still
+         RENDER from opened files (and the selectionchange sync can still
+         select these entries programmatically to report the caret's block),
+         but they are disabled as authoring choices. -->
+    <option value="h4" disabled>Heading 4 (view only)</option>
+    <option value="h5" disabled>Heading 5 (view only)</option>
+    <option value="h6" disabled>Heading 6 (view only)</option>
+    <option value="blockquote">Blockquote</option>
+    <option value="pre">Code block</option>
+  </select>
+  <button id="btn-quote"     title="Blockquote">&ldquo;&rdquo;</button>
+  <button id="btn-codeblock" title="Code block (fenced)">{ }</button>
+  <button id="btn-hr"        title="Horizontal rule">&mdash;</button>
+  <div class="sep"></div>
+  <button data-cmd="insertOrderedList"   title="Numbered list">1.</button>
+  <button data-cmd="insertUnorderedList" title="Bullet list">&bull;</button>
+  <button id="btn-task"                  title="Task list">&#9745;</button>
+  <div class="sep"></div>
+  <button data-cmd="bold"          title="Bold (Ctrl+B)"><b>B</b></button>
+  <button data-cmd="italic"        title="Italic (Ctrl+I)"><i>I</i></button>
+  <button data-cmd="strikeThrough" title="Strikethrough (Ctrl+Shift+X)"><s>S</s></button>
+  <button id="btn-code"            title="Inline code (Ctrl+E)"><code>&lt;/&gt;</code></button>
+  <button id="btn-charmap"         title="Insert special character">&Omega;</button>
+  <div class="sep"></div>
+  <button id="btn-link"   title="Insert link (Ctrl+K)">Link</button>
+  <button data-cmd="unlink" title="Remove link">Unlink</button>
+  <div class="menu-wrap">
+    <button id="btn-insert" title="Insert image, component, variable, or metadata preamble">Insert &#9662;</button>
+    <div id="insert-menu" class="menu" hidden>
+      <button id="insert-image">Image&hellip;</button>
+      <button id="insert-shortcode">Component&hellip;</button>
+      <button id="insert-variable">Variable&hellip;</button>
+      <button id="insert-metadata">Metadata preamble&hellip;</button>
+      <button id="insert-note">Note&hellip;</button>
+    </div>
+  </div>
+  <div class="sep"></div>
+  <button id="btn-table" title="Insert table">Table</button>
+  <button class="table-op" id="btn-row-add" title="Add row below"    disabled>+Row</button>
+  <button class="table-op" id="btn-row-del" title="Delete row"       disabled>&minus;Row</button>
+  <button class="table-op" id="btn-col-add" title="Add column right" disabled>+Col</button>
+  <button class="table-op" id="btn-col-del" title="Delete column"    disabled>&minus;Col</button>
+  <button id="btn-theme" title="Toggle light/dark mode"><svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-label="Dark mode"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg><svg class="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-label="Light mode"><circle cx="12" cy="12" r="4.5"/><line x1="12" y1="2.5" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="21.5"/><line x1="2.5" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="21.5" y2="12"/><line x1="5.3" y1="5.3" x2="7" y2="7"/><line x1="17" y1="17" x2="18.7" y2="18.7"/><line x1="5.3" y1="18.7" x2="7" y2="17"/><line x1="17" y1="7" x2="18.7" y2="5.3"/></svg></button>
+  <button id="btn-notes" title="Show/hide notes margin"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 4h16v11l-5 5H4z"/><path d="M15 20v-5h5"/></svg></button>
+  <button id="btn-reload" title="Reload from file, discarding unsaved changes (Ctrl+R)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-label="Reload"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg></button>
+  <button id="btn-find" title="Find (Ctrl+F)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-label="Find"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="15.6" y1="15.6" x2="21" y2="21"/></svg></button>
+  <div class="menu-wrap right">
+    <button id="btn-help" title="Help (F1)">Help &#9662;</button>
+    <div id="help-menu" class="menu" hidden>
+      <button id="help-shortcuts">Keyboard shortcuts</button>
+      <button id="help-about">About</button>
+    </div>
+  </div>
+</div>
+
+<div id="findbar" hidden>
+  <input id="find-input" type="text" placeholder="Find in document" spellcheck="false">
+  <span id="find-count"></span>
+  <button id="find-prev" title="Previous match (Shift+Enter / Shift+F3)">&#9650;</button>
+  <button id="find-next" title="Next match (Enter / F3)">&#9660;</button>
+  <button id="find-close" title="Close (Esc)">&#10005;</button>
+</div>
+
+<div id="fm-banner" hidden>
+  Document metadata: <span id="fm-lines"></span> lines of metadata preserved (saved verbatim)
+  <button id="fm-view">edit</button>
+</div>
+
+<div id="workspace">
+  <div id="page-wrap">
+    <div id="editor" contenteditable="true" spellcheck="true"></div>
+    <div id="find-overlay" aria-hidden="true"></div>
+    <div id="lint-overlay" aria-hidden="true"></div>
+    <div id="audit-overlay" aria-hidden="true"></div>
+    <div id="notes-overlay" aria-hidden="true"></div>
+  </div>
+</div>
+
+<div id="status">
+  <span id="status-path">Untitled</span>
+  <span id="status-msg"></span>
+</div>
+
+<div id="modal-backdrop" hidden>
+  <div id="modal" role="dialog" aria-modal="true">
+    <header id="modal-title"></header>
+    <div id="modal-body"></div>
+    <footer><button id="modal-close">Close</button></footer>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+const editor      = document.getElementById("editor");
+const statusPath  = document.getElementById("status-path");
+const statusMsg   = document.getElementById("status-msg");
+const blockSelect = document.getElementById("block-select");
+
+let currentPath = "";
+let currentFront = "";   // verbatim YAML front matter of the open document
+let dirty = false;
+
+/* ---------- status helpers ---------- */
+
+function updateTitle() {
+  const name = currentPath ? currentPath.split("/").pop() : "Untitled";
+  // Em dash per spec: "OpinEd — <filename>"
+  try { appSetTitle("OpinEd \u2014 " + name); } catch (e) { /* non-fatal */ }
+}
+
+function updateFmBanner() {
+  const banner = document.getElementById("fm-banner");
+  if (!currentFront) { banner.hidden = true; return; }
+  const lines = currentFront.split("\n").length - 1;
+  document.getElementById("fm-lines").textContent = lines;
+  banner.hidden = false;
+}
+
+function refreshStatus() {
+  updateTitle();
+  updateFmBanner();
+  const name = currentPath || "Untitled";
+  statusPath.innerHTML = "";
+  statusPath.appendChild(document.createTextNode(name + " "));
+  if (dirty) {
+    const d = document.createElement("span");
+    d.className = "dirty";
+    d.textContent = "[modified]";
+    statusPath.appendChild(d);
+  }
+}
+
+function flash(msg, kind) {
+  // kind: undefined = neutral, true or "error" = red, "success" = green.
+  // Colors come from themed CSS classes, not inline literals.
+  const isError = kind === true || kind === "error";
+  statusMsg.textContent = msg;
+  statusMsg.className = isError ? "err" : kind === "success" ? "ok" : "";
+  if (!isError) setTimeout(() => { if (statusMsg.textContent === msg) statusMsg.textContent = ""; }, 4000);
+}
+
+function markDirty() { if (!dirty) { dirty = true; refreshStatus(); } }
+function markClean() { dirty = false; refreshStatus(); }
+
+/* ---------- theme (light / dark / system) ---------- */
+// Preference persists in state.json via the Go bindings. "system" (the
+// default until the user toggles) follows prefers-color-scheme live.
+let themePref = "system";
+const darkMQ = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+
+function applyTheme() {
+  const resolved = themePref === "system"
+    ? (darkMQ && darkMQ.matches ? "dark" : "light")
+    : themePref;
+  document.body.dataset.theme = resolved;
+}
+
+if (darkMQ && darkMQ.addEventListener) {
+  darkMQ.addEventListener("change", () => { if (themePref === "system") applyTheme(); });
+}
+
+document.getElementById("btn-theme").addEventListener("click", () => {
+  const next = document.body.dataset.theme === "dark" ? "light" : "dark";
+  themePref = next;
+  applyTheme();
+  try { appSetTheme(next); } catch (e) { /* persistence is best-effort */ }
+  flash(next === "dark" ? "Dark mode" : "Light mode");
+});
+
+(async function initTheme() {
+  try { themePref = (await appGetTheme()) || "system"; } catch (e) {}
+  applyTheme();
+})();
+
+// Configured code-block font size (integer px, clamped Go-side).
+(async function initCodeFont() {
+  try {
+    const px = await appGetCodeFontSize();
+    if (px) document.body.style.setProperty("--code-font-size", px + "px");
+  } catch (e) { /* fallback 13px stands */ }
+})();
+
+// Audience calibration for the SEO audit's readability bands
+// ([editor] audience: "technical" default, or "general").
+let audiencePref = "technical";
+(async function initAudience() {
+  try { audiencePref = (await appGetAudience()) || "technical"; } catch (e) {}
+})();
+
+// Shrink-only window clamp: the default 980x1200 runs off smaller
+// displays, so measure the screen once at startup and shrink to fit
+// (with margin for panels and window decorations). Never grows.
+(function clampWindowToScreen() {
+  try {
+    const availW = screen.availWidth || screen.width || 0;
+    const availH = screen.availHeight || screen.height || 0;
+    if (!availW || !availH) return;
+    const targetW = Math.min(980, Math.max(600, availW - 40));
+    const targetH = Math.min(1200, Math.max(400, availH - 80));
+    if (targetW < 980 || targetH < 1200) {
+      appSetWindowSize(targetW, targetH);
+    }
+  } catch (e) { /* keep the default size */ }
+})();
+
+/* ---------- small utilities ---------- */
+
+function escHtml(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+function escAttr(s) { return escHtml(s).replace(/"/g, "&quot;"); }
+
+// Element at the caret/anchor, or null if the selection is outside the editor.
+function anchorElement() {
+  const sel = getSelection();
+  if (!sel || !sel.anchorNode) return null;
+  let n = sel.anchorNode;
+  if (n.nodeType === Node.TEXT_NODE) n = n.parentElement;
+  if (!n || !editor.contains(n)) return null;
+  return n;
+}
+
+/* ---------- editing commands ---------- */
+
+// Produce <strong>/<em>-style markup rather than inline CSS spans.
+document.execCommand("styleWithCSS", false, false);
+
+function exec(cmd, val) {
+  editor.focus();
+  document.execCommand(cmd, false, val || null);
+  markDirty();
+}
+
+// Undo/redo need their own routine, not exec(): the command must go to
+// WHATEVER is focused (a text field keeps its own stack; stealing focus
+// to the editor would hijack it), and the dirty flag should move only
+// when a document-side change actually happens (an empty stack is a
+// no-op, and field-local undo is not a document change). The keystroke
+// interception exists because this webview delivers no native Ctrl+Z
+// accelerator at all -- verified: the command machinery works, the
+// binding never fires.
+function doUndoRedo(cmd) {
+  const a = document.activeElement;
+  const inField = a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA");
+  const willAct = document.queryCommandEnabled(cmd);
+  document.execCommand(cmd);
+  if (!inField && willAct) markDirty();
+}
+
+function setBlock(tag) {
+  if (tag === "pre") { convertToCodeBlock(); return; }
+  if (tag === "p") {
+    // Escaping a blockquote needs outdent, not formatBlock: WebKit treats
+    // blockquote as an indentation container and formatBlock('p') inside
+    // one is a silent no-op (the content already IS a paragraph).
+    const n = anchorElement();
+    const bq = n && n.closest("blockquote");
+    if (bq && editor.contains(bq)) { exec("outdent"); return; }
+  }
+  exec("formatBlock", "<" + tag + ">");
+}
+
+/* ---------- inline code toggle ---------- */
+
+function toggleInlineCode() {
+  const n = anchorElement();
+  if (!n) return;
+  const existing = n.closest("code");
+  if (existing && !existing.closest("pre")) {          // unwrap
+    const parent = existing.parentNode;
+    while (existing.firstChild) parent.insertBefore(existing.firstChild, existing);
+    parent.removeChild(existing);
+    markDirty();
+    return;
+  }
+  const sel = getSelection();
+  if (!sel.rangeCount) return;
+  const range = sel.getRangeAt(0);
+  if (range.collapsed) return;                          // nothing selected
+  const code = document.createElement("code");
+  try {
+    range.surroundContents(code);
+  } catch (e) {                                         // selection crosses elements
+    code.appendChild(range.extractContents());
+    range.insertNode(code);
+  }
+  markDirty();
+}
+
+/* ---------- links & images ---------- */
+
+function insertLink() {
+  const sel = getSelection();
+  const url = prompt("Link URL:", "https://");
+  if (!url) return;
+  if (sel.rangeCount && !sel.getRangeAt(0).collapsed) {
+    exec("createLink", url);
+  } else {
+    exec("insertHTML", '<a href="' + escAttr(url) + '">' + escHtml(url) + "</a>");
+  }
+}
+
+function insertImage() {
+  const url = prompt("Image URL:", "");
+  if (!url) return;
+  const alt = prompt("Alt text:", "") || "";
+  exec("insertHTML", '<img src="' + escAttr(url) + '" alt="' + escAttr(alt) + '">');
+}
+
+/* ---------- code blocks ---------- */
+/* Model: ONE <pre><code> whose text contains literal \n newlines (what
+   goldmark produces and what serializes as one fenced block). WebKit's
+   defaults fight this -- Enter splits the element, insertText("\n")
+   splits it, and formatBlock('pre') converts per-paragraph into stacked
+   one-line pres -- so all three paths are overridden below. */
+
+// Insert text verbatim at the caret as a raw text node (never splits the
+// enclosing block). Bypasses the native undo stack -- same documented
+// limitation as table structure edits.
+function insertRawTextAtCaret(text) {
+  const sel = getSelection();
+  if (!sel.rangeCount) return;
+  const range = sel.getRangeAt(0);
+  range.deleteContents();
+  const tn = document.createTextNode(text);
+  range.insertNode(tn);
+  range.setStartAfter(tn);
+  range.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
+// Enter inside a code block: newline within the SAME block. Exception:
+// Enter at the very end when the block already ends with an empty line
+// (i.e. the second consecutive Enter) exits to a fresh paragraph below --
+// the convention every code-aware editor uses. Ctrl+0 remains the
+// explicit escape from anywhere in the block.
+function codeBlockEnter(pre) {
+  const code = pre.querySelector("code") || pre;
+  const sel = getSelection();
+  if (!sel.rangeCount) return;
+  const range = sel.getRangeAt(0);
+  let before = "", after = "";
+  try {
+    const head = document.createRange();
+    head.selectNodeContents(code);
+    head.setEnd(range.startContainer, range.startOffset);
+    before = head.toString();
+    const tail = document.createRange();
+    tail.selectNodeContents(code);
+    tail.setStart(range.endContainer, range.endOffset);
+    after = tail.toString();
+  } catch (e) {
+    insertRawTextAtCaret("\n");
+    markDirty();
+    return;
+  }
+
+  // Enter on an empty last line (the second consecutive Enter): exit to a
+  // fresh paragraph below. An empty block exited this way removes itself.
+  if (range.collapsed && /\n$/.test(before) && /^\n?$/.test(after)) {
+    code.textContent = before.replace(/\n$/, "");
+    const para = document.createElement("p");
+    para.innerHTML = "<br>";
+    pre.after(para);
+    if (code.textContent === "") pre.remove();
+    const r = document.createRange();
+    r.setStart(para, 0);
+    r.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(r);
+    markDirty();
+    return;
+  }
+
+  insertRawTextAtCaret("\n");
+  // Two fixups, one cause each:
+  // (1) Node-boundary caret affinity: the insert leaves the caret at the
+  //     seam between two text nodes, which WebKit renders at the END of
+  //     the previous line ("first Enter does nothing"). Normalize to ONE
+  //     text node and place the caret by explicit character offset, which
+  //     renders with downstream affinity -- at the start of the new line.
+  // (2) Line-box existence: a caret after the block's final newline has
+  //     no line to sit on; when at the very end, fold a sentinel newline
+  //     into the same node so the line exists. At most one accumulates.
+  code.normalize();
+  const tn = code.firstChild;
+  if (tn && tn.nodeType === Node.TEXT_NODE && code.childNodes.length === 1) {
+    let off = Math.min(before.length + 1, tn.nodeValue.length);
+    if (off === tn.nodeValue.length) tn.nodeValue += "\n"; // sentinel
+    const r = document.createRange();
+    r.setStart(tn, off);
+    r.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(r);
+  }
+  markDirty();
+}
+
+// Block-format "Code block": merge every block the selection touches into
+// ONE pre, lines joined with \n (paragraph margins disappear because the
+// result is a single block with the code line-height, not stacked pres).
+function convertToCodeBlock() {
+  const sel = getSelection();
+  if (!sel.rangeCount) { editor.focus(); return; }
+  const range = sel.getRangeAt(0);
+  const blocks = [];
+  for (const el of editor.children) {
+    if (range.intersectsNode(el)) blocks.push(el);
+  }
+  if (!blocks.length) return;
+  const text = blocks
+    .map(b => (b.innerText !== undefined ? b.innerText : b.textContent))
+    .join("\n")
+    .replace(/\n+$/, "");
+  const pre = document.createElement("pre");
+  const code = document.createElement("code");
+  code.textContent = text;
+  pre.appendChild(code);
+  blocks[0].before(pre);
+  blocks.forEach(b => b.remove());
+  const r = document.createRange();
+  r.selectNodeContents(code);
+  r.collapse(false);
+  sel.removeAllRanges();
+  sel.addRange(r);
+  markDirty();
+}
+
+function insertCodeBlock() {
+  const lang = prompt("Language (optional, e.g. go, python):", "");
+  if (lang === null) return;
+  const sel0 = getSelection();
+  const text = sel0 && sel0.rangeCount && !sel0.getRangeAt(0).collapsed ? sel0.toString() : "";
+  const cls = lang.trim() ? ' class="language-' + escAttr(lang.trim()) + '"' : "";
+  // A marker id gives us a handle on the inserted node (insertHTML returns
+  // none) so the caret can be placed INSIDE the block, not after it.
+  const marker = "cb" + Date.now().toString(36);
+  exec("insertHTML",
+    "<pre><code" + cls + ' id="' + marker + '">' + (escHtml(text) || "\n") + "</code></pre>");
+  const codeEl = document.getElementById(marker);
+  if (codeEl) {
+    codeEl.removeAttribute("id");
+    const sel = getSelection();
+    const r = document.createRange();
+    if (text) {
+      r.selectNodeContents(codeEl);
+      r.collapse(false);          // wrapped a selection: caret after it
+    } else {
+      r.setStart(codeEl.firstChild || codeEl, 0);
+      r.collapse(true);           // empty block: caret on its first line
+    }
+    sel.removeAllRanges();
+    sel.addRange(r);
+  }
+  editor.focus();
+}
+
+/* ---------- task lists ---------- */
+
+function insertTaskList() {
+  exec("insertHTML",
+    '<ul class="contains-task-list"><li class="task-list-item">' +
+    '<input type="checkbox" contenteditable="false"> </li></ul>');
+}
+
+// Toggle checkboxes via the `checked` ATTRIBUTE (not just the property) so
+// the state survives innerHTML serialization on save.
+editor.addEventListener("click", (ev) => {
+  // Ctrl+Click (or Cmd+Click) on a link opens it in the system browser.
+  // Plain click keeps contenteditable's default: place the caret for editing.
+  const link = ev.target.closest("a");
+  if (link && (ev.ctrlKey || ev.metaKey)) {
+    ev.preventDefault();
+    const href = link.getAttribute("href") || "";
+    appOpenURL(href)
+      .then(() => flash("Opened in browser: " + href))
+      .catch((e) => flash(String(e), true));
+    return;
+  }
+  const t = ev.target;
+  if (t.tagName === "INPUT" && t.type === "checkbox") {
+    ev.preventDefault();
+    if (t.hasAttribute("checked")) t.removeAttribute("checked");
+    else t.setAttribute("checked", "");
+    t.checked = t.hasAttribute("checked");
+    markDirty();
+  }
+});
+
+/* ---------- tables ---------- */
+
+function cellCtx() {
+  const n = anchorElement();
+  if (!n) return null;
+  const cell = n.closest("td,th");
+  if (!cell) return null;
+  return { cell: cell, row: cell.parentElement, table: cell.closest("table") };
+}
+
+function tableInsert() {
+  const r = parseInt(prompt("Body rows:", "2") || "0", 10);
+  const c = parseInt(prompt("Columns:", "3") || "0", 10);
+  if (!(r > 0 && c > 0)) return;
+  let h = "<table><thead><tr>";
+  for (let j = 0; j < c; j++) h += "<th>Header</th>";
+  h += "</tr></thead><tbody>";
+  for (let i = 0; i < r; i++) {
+    h += "<tr>";
+    for (let j = 0; j < c; j++) h += "<td><br></td>";
+    h += "</tr>";
+  }
+  h += "</tbody></table><p><br></p>";
+  exec("insertHTML", h);
+}
+
+function tableRowAdd() {
+  const x = cellCtx(); if (!x) return;
+  const cols = x.row.cells.length;
+  const tr = document.createElement("tr");
+  for (let j = 0; j < cols; j++) {
+    const td = document.createElement("td");
+    td.innerHTML = "<br>";
+    tr.appendChild(td);
+  }
+  const tbody = x.table.tBodies[0] || x.table;
+  if (x.row.parentElement.tagName === "THEAD") tbody.insertBefore(tr, tbody.firstChild);
+  else x.row.after(tr);
+  markDirty();
+}
+
+function tableRowDel() {
+  const x = cellCtx(); if (!x) return;
+  if (x.row.parentElement.tagName === "THEAD") { flash("Header row cannot be deleted", true); return; }
+  x.row.remove();
+  if (!x.table.tBodies[0] || x.table.tBodies[0].rows.length === 0) x.table.remove();
+  markDirty();
+}
+
+function tableColAdd() {
+  const x = cellCtx(); if (!x) return;
+  const i = x.cell.cellIndex;
+  for (const row of x.table.rows) {
+    const c = document.createElement(row.parentElement.tagName === "THEAD" ? "th" : "td");
+    c.innerHTML = "<br>";
+    row.insertBefore(c, row.cells[i + 1] || null);
+  }
+  markDirty();
+}
+
+function tableColDel() {
+  const x = cellCtx(); if (!x) return;
+  const i = x.cell.cellIndex;
+  for (const row of Array.from(x.table.rows)) {
+    if (row.cells[i]) row.deleteCell(i);
+  }
+  if (x.table.rows.length === 0 || x.table.rows[0].cells.length === 0) x.table.remove();
+  markDirty();
+}
+
+/* ---------- Find in document (Tier 2) ----------
+   Matches are computed over a flattened text image of the editor so hits
+   crossing formatting boundaries (e.g. "foo **bar**") are found. Highlights
+   are drawn as translucent boxes in #find-overlay, a sibling of the editor:
+   the document DOM is never mutated (no dirty flag, no undo pollution, no
+   markup leaking into saves), and clearing is plain child removal. The
+   overlay is positioned in content space, so it scrolls with the page and
+   needs no scroll handler; it is repainted on edits and window resize. */
+
+const findbar     = document.getElementById("findbar");
+const findInput   = document.getElementById("find-input");
+const findCount   = document.getElementById("find-count");
+const workspace   = document.getElementById("workspace");
+const pageWrap    = document.getElementById("page-wrap");
+const findOverlay = document.getElementById("find-overlay");
+
+let findMatches = [];   // Range objects, in document order
+let findIndex   = -1;
+let findTimer   = null;
+
+function clearFindHighlights() {
+  findOverlay.textContent = "";   // remove all hit boxes; cannot fail to repaint
+}
+
+// Draw one translucent box per line-fragment rect of every match, positioned
+// relative to #page-wrap (content space): base and match rects are measured
+// in the same viewport pass, so their difference is scroll-invariant.
+function paintFindHighlights() {
+  clearFindHighlights();
+  if (findbar.hidden || !findMatches.length) return;
+  const base = pageWrap.getBoundingClientRect();
+  const frag = document.createDocumentFragment();
+  findMatches.forEach((r, i) => {
+    for (const rect of r.getClientRects()) {
+      if (rect.width === 0 && rect.height === 0) continue;
+      const d = document.createElement("div");
+      d.className = i === findIndex ? "find-hit current" : "find-hit";
+      d.style.left   = (rect.left - base.left) + "px";
+      d.style.top    = (rect.top - base.top) + "px";
+      d.style.width  = rect.width + "px";
+      d.style.height = rect.height + "px";
+      frag.appendChild(d);
+    }
+  });
+  findOverlay.appendChild(frag);
+}
+
+// Flatten the editor's text nodes into one string, remembering where each
+// node's text begins so global offsets can be mapped back to (node, offset).
+function collectTextSegments() {
+  const segs = [];
+  let text = "";
+  const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
+  let n;
+  while ((n = walker.nextNode())) {
+    if (n.nodeValue.length === 0) continue;
+    segs.push({ node: n, start: text.length, len: n.nodeValue.length });
+    text += n.nodeValue;
+  }
+  return { segs, text };
+}
+
+// First segment (scanning forward from `from`) containing the global offset.
+// Start offsets live in [seg.start, seg.start+len); end offsets in (seg.start,
+// seg.start+len] so a match ending exactly at a node boundary stays in it.
+function findSeg(segs, off, forEnd, from) {
+  for (let i = from; i < segs.length; i++) {
+    const s = segs[i];
+    if (forEnd ? off > s.start && off <= s.start + s.len
+               : off >= s.start && off < s.start + s.len) return i;
+  }
+  return segs.length - 1;
+}
+
+function runFind() {
+  clearFindHighlights();
+  findMatches = [];
+  findIndex = -1;
+  const q = findInput.value;
+  if (!q) { updateFindCount(); return; }
+
+  const { segs, text } = collectTextSegments();
+  // Case-insensitive by default; if case folding changes string length
+  // (rare Unicode cases like 'İ'), offsets would misalign, so fall back to
+  // case-sensitive matching for correctness.
+  let haystack = text.toLowerCase();
+  let needle = q.toLowerCase();
+  if (haystack.length !== text.length) { haystack = text; needle = q; }
+
+  let hint = 0;
+  let idx = haystack.indexOf(needle);
+  while (idx !== -1 && findMatches.length < 5000) {
+    const a = findSeg(segs, idx, false, hint);
+    const b = findSeg(segs, idx + needle.length, true, a);
+    const r = document.createRange();
+    r.setStart(segs[a].node, idx - segs[a].start);
+    r.setEnd(segs[b].node, idx + needle.length - segs[b].start);
+    findMatches.push(r);
+    hint = a;
+    idx = haystack.indexOf(needle, idx + needle.length);
+  }
+  if (findMatches.length) paintFindHighlights();
+  updateFindCount();
+}
+
+function updateFindCount() {
+  if (!findInput.value) {
+    findCount.textContent = "";
+    findCount.classList.remove("none");
+  } else if (!findMatches.length) {
+    findCount.textContent = "No matches";
+    findCount.classList.add("none");
+  } else {
+    findCount.classList.remove("none");
+    findCount.textContent = (findIndex + 1) + " of " + findMatches.length;
+  }
+}
+
+function gotoMatch(i, scroll = true) {
+  if (!findMatches.length) { updateFindCount(); return; }
+  findIndex = ((i % findMatches.length) + findMatches.length) % findMatches.length;
+  paintFindHighlights();   // repaint so the .current emphasis moves
+  const r = findMatches[findIndex];
+  if (scroll) {
+    const rect = r.getBoundingClientRect();
+    const ws = workspace.getBoundingClientRect();
+    if (rect.top < ws.top + 40 || rect.bottom > ws.bottom - 40) {
+      workspace.scrollTop += rect.top - (ws.top + workspace.clientHeight / 3);
+    }
+  }
+  updateFindCount();
+}
+
+function openFind() {
+  findbar.hidden = false;
+  // Prefill from the current selection, the way desktop editors do.
+  const sel = getSelection();
+  if (sel.rangeCount && !sel.isCollapsed && editor.contains(sel.anchorNode)) {
+    const t = sel.toString();
+    if (t && t.length <= 200 && !t.includes("\n")) findInput.value = t;
+  }
+  findInput.focus();
+  findInput.select();
+  runFind();
+  if (findMatches.length) gotoMatch(0);
+}
+
+function closeFind() {
+  findbar.hidden = true;
+  clearTimeout(findTimer);      // a pending debounce must not repaint after close
+  clearFindHighlights();
+  findMatches = [];
+  findIndex = -1;
+  editor.focus();
+}
+
+// Reflow moves the text under the boxes; recompute their positions.
+window.addEventListener("resize", () => {
+  if (!findbar.hidden && findMatches.length) paintFindHighlights();
+});
+
+findInput.addEventListener("input", () => {
+  // Clear immediately, in the same event: stale highlights must not outlive
+  // the query they belong to, even for the debounce interval.
+  clearFindHighlights();
+  clearTimeout(findTimer);
+  findTimer = setTimeout(() => {
+    if (findbar.hidden) return; // bar was closed while the timer was pending
+    runFind();
+    if (findMatches.length) gotoMatch(0);
+  }, 150);
+});
+findInput.addEventListener("keydown", (ev) => {
+  if (ev.key === "Enter") {
+    ev.preventDefault();
+    gotoMatch(findIndex + (ev.shiftKey ? -1 : 1));
+  }
+});
+document.getElementById("btn-find").addEventListener("click", openFind);
+document.getElementById("find-next").addEventListener("click", () => gotoMatch(findIndex + 1));
+document.getElementById("find-prev").addEventListener("click", () => gotoMatch(findIndex - 1));
+document.getElementById("find-close").addEventListener("click", closeFind);
+
+// Edits invalidate the computed Ranges; recompute while the bar is open.
+// Highlights refresh in place without scrolling, so typing isn't yanked around.
+editor.addEventListener("input", () => {
+  if (findbar.hidden) return;
+  clearTimeout(findTimer);
+  findTimer = setTimeout(() => {
+    if (findbar.hidden) return; // bar was closed while the timer was pending
+    const keep = Math.max(findIndex, 0);
+    runFind();
+    if (findMatches.length) gotoMatch(Math.min(keep, findMatches.length - 1), false);
+  }, 200);
+});
+
+/* ---------- Tools: Harper spelling & grammar ----------
+   Continuous checking: the document's visible text is flattened (skipping
+   code, which would be all noise), sent to Harper's WASM linter, and each
+   reported span is mapped back to a DOM Range using the same segment
+   machinery as find. Marks are 2px underline bars in #lint-overlay -- the
+   proven no-DOM-mutation overlay approach, so linting can never dirty the
+   document, the undo stack, or saved output. The linter itself is loaded
+   by the <script type="module"> bridge at the end of this file; if the
+   vendored assets are absent, Harper reports itself unavailable and the
+   editor works normally without it. */
+
+const lintOverlay = document.getElementById("lint-overlay");
+const harperCheck = document.getElementById("harper-check");
+
+let harperEnabled = false;   // becomes true once the linter initializes
+let harperLinter  = null;
+let harperTimer   = null;
+let harperBusy    = false;
+let harperQueued  = false;
+let harperLints   = [];      // { range, message, kind }
+let harperLastMsg = null;    // last lint whose message was shown
+
+// Flatten visible text for linting: skip code (pre/code), and insert a
+// paragraph break between block elements so Harper doesn't see adjacent
+// blocks as one run-on sentence. Separator characters occupy offsets that
+// map to no DOM position; spans touching them are dropped defensively.
+function collectLintText() {
+  const BLOCKS = "p,h1,h2,h3,h4,h5,h6,li,blockquote,td,th";
+  const segs = [];
+  let text = "";
+  let lastBlock = null;
+  // Suppression intervals [s, e) in the flattened text where findings are
+  // artifacts of OUR surgery rather than the author's prose: (a) seams
+  // where code was elided (the flanking spaces become adjacent, tripping
+  // multi-space formatting rules on text the document doesn't contain),
+  // and (b) shortcode notation blanked to space runs. Checkers drop any
+  // finding that intersects one of these.
+  const drops = [];
+  const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
+  let n;
+  let pendingSeam = false;
+  while ((n = walker.nextNode())) {
+    if (n.nodeValue.length === 0) continue;
+    const el = n.parentElement;
+    if (el && el.closest("pre, code")) { pendingSeam = text.length > 0; continue; }
+    const block = el ? el.closest(BLOCKS) : null;
+    if (block !== lastBlock && text.length) { text += "\n\n"; pendingSeam = false; }
+    lastBlock = block;
+    if (pendingSeam) {
+      drops.push([Math.max(0, text.length - 1), text.length + 1]);
+      pendingSeam = false;
+    }
+    segs.push({ node: n, start: text.length, len: n.nodeValue.length });
+    text += n.nodeValue;
+  }
+  text = blankShortcodes(text, drops);
+  return { segs, text, drops };
+}
+
+// True when a finding's span lies on surgically altered text.
+function lintDropped(drops, s, e) {
+  for (const [a, b] of drops) {
+    if (s < b && e > a) return true;
+  }
+  return false;
+}
+
+// Harper spans count Unicode code points; JS Ranges count UTF-16 units.
+// They differ only when astral-plane characters (emoji etc.) are present.
+function cpToUtf16Map(text) {
+  if (!/[\uD800-\uDFFF]/.test(text)) return null; // identical; skip the work
+  const map = [0];
+  let u = 0;
+  for (const ch of text) { u += ch.length; map.push(u); }
+  return map;
+}
+
+async function ensureHarper() {
+  if (harperLinter) return;
+  if (!window.HarperBridge) {
+    await new Promise((res) => window.addEventListener("harper-bridge-ready", res, { once: true }));
+  }
+  if (window.HarperBridge.error) {
+    throw new Error(window.HarperBridge.error + " \u2014 run `make vendor-harper`, then `make`");
+  }
+  harperLinter = await window.HarperBridge.create();
+}
+
+function updateHarperUI() {
+  harperCheck.classList.toggle("off", !harperEnabled);
+  // Native spellcheck would double-underline everything Harper marks.
+  editor.setAttribute("spellcheck", harperEnabled ? "false" : "true");
+}
+
+async function toggleHarper() {
+  closeMenus();
+  if (harperEnabled) {
+    harperEnabled = false;
+    harperLints = [];
+    valeLints = [];        // toggling checkers clears the Vale snapshot too
+    paintLintOverlay();
+    updateHarperUI();
+    flash("Spelling & grammar checking off");
+    return;
+  }
+  try {
+    flash("Starting spelling & grammar checker\u2026");
+    await ensureHarper();
+    harperEnabled = true;
+    valeLints = [];        // fresh start: stale style marks don't ride along
+    updateHarperUI();
+    flash("Spelling & grammar checking on", "success");
+    runHarper();
+  } catch (e) {
+    updateHarperUI();
+    flash("Harper unavailable: " + (e.message || e), true);
+  }
+}
+
+function scheduleHarper(delay = 800) {
+  if (!harperEnabled) return;
+  clearTimeout(harperTimer);
+  harperTimer = setTimeout(runHarper, delay);
+}
+
+// Offset pair -> DOM Range through the segment table, with the guards
+// against synthetic separators. Shared by Harper and character hygiene.
+function lintRange(segs, s, e) {
+  if (!(e > s) || !segs.length) return null;
+  const a = findSeg(segs, s, false, 0);
+  const b = findSeg(segs, e, true, a);
+  const sa = segs[a], sb = segs[b];
+  if (s < sa.start || s >= sa.start + sa.len) return null;
+  if (e <= sb.start || e > sb.start + sb.len) return null;
+  const r = document.createRange();
+  r.setStart(sa.node, s - sa.start);
+  r.setEnd(sb.node, e - sb.start);
+  return r;
+}
+
+/* Character hygiene: the three Unicode-level checks Vale's plaintext
+   mode structurally cannot host (established empirically: non-ASCII
+   characters are unmatchable there). They live with the continuous
+   checker because the primary case -- space + non-breaking space, minted
+   by typing two spaces in a contenteditable -- is a typing artifact best
+   caught seconds after it happens. JS regexes have none of Vale's
+   blindness. */
+function charHygieneLints(segs, text, drops) {
+  const out = [];
+  // (a) Consecutive space-class characters, including the hidden nbsp.
+  for (const m of text.matchAll(/\p{Zs}{2,}/gu)) {
+    const s = m.index, e = m.index + m[0].length;
+    if (lintDropped(drops, s, e)) continue;
+    const r = lintRange(segs, s, e);
+    if (r) out.push({
+      range: r,
+      message: /\u00A0/.test(m[0])
+        ? "Consecutive spaces (contains a hidden non-breaking space from typing two spaces)."
+        : "Consecutive spaces.",
+      kind: "Character"
+    });
+  }
+  // (b) Double-quote style consistency: flag the minority style.
+  const straight = [...text.matchAll(/"/g)];
+  const curly = [...text.matchAll(/[\u201C\u201D]/g)];
+  if (straight.length && curly.length && straight.length !== curly.length) {
+    const minority = straight.length < curly.length ? straight : curly;
+    const msg = "Inconsistent double-quote style: " +
+      Math.min(straight.length, curly.length) + " " +
+      (straight.length < curly.length ? "straight" : "curly") + " vs " +
+      Math.max(straight.length, curly.length) + " " +
+      (straight.length < curly.length ? "curly" : "straight") + " in this document.";
+    for (const m of minority) {
+      if (lintDropped(drops, m.index, m.index + 1)) continue;
+      const r = lintRange(segs, m.index, m.index + 1);
+      if (r) out.push({ range: r, message: msg, kind: "Character" });
+    }
+  }
+  // (c) Paragraph-final punctuation. Native by necessity, established
+  // twice over: Vale's plaintext mode cannot see block types (so it
+  // flagged headings and list items), and it locates multiline matches
+  // by document-order substring search of the match text (so a finding
+  // for "...from devices" landed on the first "devices" anywhere in the
+  // document -- mid-sentence, line 1). Here the DOM supplies block types
+  // and ranges are computed, not searched. Scope: paragraphs only --
+  // headings are exempt by selection; list items belong to the Tufte
+  // grunt check; code, tables, and opaque regions are never <p>.
+  for (const para of editor.querySelectorAll("p")) {
+    if (para.closest("li")) continue;                   // loose-list items
+    const t = (para.textContent || "").replace(/\s+$/u, "");
+    if (!t || !/[\p{L}\p{N}]$/u.test(t)) continue;
+    // Mark the final word: last non-blank text node, tail word within it.
+    const w = document.createTreeWalker(para, NodeFilter.SHOW_TEXT);
+    let node, lastNode = null;
+    while ((node = w.nextNode())) if (node.nodeValue.trim()) lastNode = node;
+    if (!lastNode) continue;
+    const m = lastNode.nodeValue.match(/[\p{L}\p{N}]+(?=\s*$)/u);
+    if (!m) continue;
+    const r = document.createRange();
+    r.setStart(lastNode, m.index);
+    r.setEnd(lastNode, m.index + m[0].length);
+    out.push({
+      range: r,
+      message: "Paragraph ends without terminal punctuation.",
+      kind: "Style"
+    });
+  }
+  // (d) Smart punctuation inside code (its own walk: code is excluded
+  // from the prose collector by design; opaque component regions stay
+  // exempt -- foreign syntax is the author's business).
+  const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
+  let n;
+  while ((n = walker.nextNode())) {
+    const el = n.parentElement;
+    if (!el || !el.closest("pre, code") || el.closest(".opaque-sc")) continue;
+    for (const m of n.nodeValue.matchAll(/[\u2018\u2019\u201C\u201D]/g)) {
+      const r = document.createRange();
+      r.setStart(n, m.index);
+      r.setEnd(n, m.index + 1);
+      out.push({
+        range: r,
+        message: "Smart quote inside code \u2014 breaks copy-paste and compilation.",
+        kind: "Character"
+      });
+    }
+  }
+  return out;
+}
+
+async function runHarper() {
+  if (!harperEnabled) return;
+  if (harperBusy) { harperQueued = true; return; } // WASM run in flight; coalesce
+  harperBusy = true;
+  const collected = collectLintText();
+  const charL = charHygieneLints(collected.segs, collected.text, collected.drops);
+  let hl = [];
+  if (harperLinter) {
+    try {
+      const { segs, text, drops } = collected;
+      const lints = text.trim()
+        ? await harperLinter.lint(text, { language: "plaintext" })
+        : [];
+      const cpMap = cpToUtf16Map(text);
+      for (const l of lints) {
+        const sp = l.span();
+        let s = sp.start, e = sp.end;
+        if (cpMap) { s = cpMap[s] !== undefined ? cpMap[s] : s; e = cpMap[e] !== undefined ? cpMap[e] : e; }
+        if (e > text.length) continue;
+        // Findings on surgically altered text (code-elision seams, blanked
+        // shortcode notation) are artifacts of the collector, not the prose.
+        if (lintDropped(drops, s, e)) continue;
+        const r = lintRange(segs, s, e);
+        if (r) hl.push({ range: r, message: l.message(), kind: l.lint_kind() });
+        if (l.free) l.free();
+      }
+    } catch (e) {
+      hl = [];
+      flash("Harper: " + (e.message || e), true);
+    }
+  }
+  harperLints = hl.concat(charL);
+  paintLintOverlay();
+  harperBusy = false;
+  if (harperQueued) { harperQueued = false; scheduleHarper(200); }
+}
+
+function paintLintOverlay() {
+  lintOverlay.textContent = "";
+  const pool = [];
+  if (harperEnabled) {
+    for (const l of harperLints) pool.push([l, l.kind === "Spelling" ? "lint-hit spelling" : "lint-hit"]);
+  }
+  for (const l of valeLints) pool.push([l, "lint-hit vale"]);
+  if (!pool.length) return;
+  const base = pageWrap.getBoundingClientRect();
+  const frag = document.createDocumentFragment();
+  for (const [l, cls] of pool) {
+    for (const rect of l.range.getClientRects()) {
+      if (rect.width === 0) continue;
+      const d = document.createElement("div");
+      d.className = cls;
+      d.style.left  = (rect.left - base.left) + "px";
+      d.style.top   = (rect.bottom - base.top - 2) + "px";
+      d.style.width = rect.width + "px";
+      frag.appendChild(d);
+    }
+  }
+  lintOverlay.appendChild(frag);
+}
+
+// Placing the caret inside a marked span shows its message in the status bar.
+document.addEventListener("selectionchange", () => {
+  const pool = (harperEnabled ? harperLints : []).concat(valeLints);
+  if (!pool.length) return;
+  const sel = getSelection();
+  if (!sel.anchorNode || !editor.contains(
+        sel.anchorNode.nodeType === Node.TEXT_NODE ? sel.anchorNode.parentElement : sel.anchorNode)) return;
+  let hit = null;
+  for (const l of pool) {
+    try {
+      if (l.range.isPointInRange(sel.anchorNode, sel.anchorOffset)) { hit = l; break; }
+    } catch (e) { /* range invalidated by edits; next run rebuilds */ }
+  }
+  if (hit && hit !== harperLastMsg) {
+    harperLastMsg = hit;
+    flash(hit.kind + ": " + hit.message);
+  } else if (!hit) {
+    harperLastMsg = null;
+  }
+});
+
+// Recheck after edits; reposition marks on resize alongside find highlights.
+// Vale marks are on-demand snapshots: editing invalidates their ranges, so
+// they clear on input (re-run from Audit > Vale).
+editor.addEventListener("input", () => {
+  if (valeLints.length) { valeLints = []; paintLintOverlay(); }
+  scheduleHarper();
+});
+window.addEventListener("resize", () => { if (harperEnabled) paintLintOverlay(); });
+
+// The checker is OFF by default: nothing runs when a document opens.
+// Audit > Spelling & grammar switches it on (loading the linter on first
+// use via ensureHarper) and it then checks continuously until toggled
+// off. Character-hygiene checks ride the same toggle.
+updateHarperUI();
+
+/* ---------- Tools: Document audit (SEO) ----------
+   On-demand, native checks of on-page SEO hygiene verifiable from the
+   document alone: heading structure, image alts, link anchor quality,
+   content stats, readability. Honest scope: rankings, backlinks, page
+   speed, and metadata (front matter is not yet parsed) are site-level or
+   future concerns and are NOT claimed here. Clicking a finding scrolls to
+   it and pulses a highlight via a transient overlay. */
+
+const auditOverlay = document.getElementById("audit-overlay");
+let auditFindings = [];   // { sev, message, el|null }
+
+const GENERIC_ANCHORS = new Set([
+  "click here", "here", "read more", "more", "link", "this", "this link",
+  "learn more", "see more", "details", "continue reading"
+]);
+
+// fmValue extracts a top-level front-matter value by key, understanding
+// YAML block scalars: for `key: >-` (folded) or `key: |` (literal) forms it
+// collects the indented continuation lines instead of reading the block
+// indicator itself as the value (which made "description: >-" measure as
+// 2 characters). Folded lines join with spaces, literal with newlines --
+// matching how much text a consumer actually sees. Not a full YAML parser;
+// plain values also have surrounding quotes stripped.
+function fmValue(front, key) {
+  const lines = front.split("\n");
+  const re = new RegExp("^" + key + "\\s*:\\s*(.*)$", "i");
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(re);
+    if (!m) continue;
+    const v = m[1].trim();
+    const block = v.match(/^([>|])[+-]?$/);
+    if (!block) return v.replace(/^["']/, "").replace(/["']$/, "");
+    const parts = [];
+    for (let j = i + 1; j < lines.length; j++) {
+      const l = lines[j];
+      if (/^\s+\S/.test(l)) parts.push(l.trim());
+      else if (l.trim() === "") parts.push("");
+      else break; // next key, or the closing fence
+    }
+    while (parts.length && parts[parts.length - 1] === "") parts.pop();
+    return parts.join(block[1] === ">" ? " " : "\n");
+  }
+  return null;
+}
+
+// GitHub's heading-anchor slug algorithm (the reference implementation
+// for fragment-link validation; Hugo/goldmark agree for ASCII headings):
+// lowercase, strip punctuation, spaces to hyphens, duplicates suffixed.
+function githubSlug(text, used) {
+  const base = text.trim().toLowerCase()
+    .replace(/[^\w\- ]/g, "")
+    .replace(/ /g, "-");
+  let slug = base, i = 1;
+  while (used.has(slug)) slug = base + "-" + i++;
+  used.add(slug);
+  return slug;
+}
+
+function auditSyllables(word) {
+  const w = word.toLowerCase().replace(/[^a-z]/g, "").replace(/e$/, "");
+  const groups = w.match(/[aeiouy]+/g);
+  return Math.max(1, groups ? groups.length : 1);
+}
+
+function runAudit() {
+  const findings = [];
+  const add = (sev, message, el) => findings.push({ sev, message, el: el || null });
+  const txt = (el) => (el.textContent || "").trim();
+
+  // --- Heading structure ---
+  const h1s = Array.from(editor.querySelectorAll("h1"));
+  if (h1s.length === 0) {
+    add("error", "No H1: the document has no top-level title heading.");
+  } else {
+    for (let i = 1; i < h1s.length; i++) {
+      add("warn", "Multiple H1s: \u201c" + txt(h1s[i]).slice(0, 40) + "\u201d \u2014 a page should have exactly one.", h1s[i]);
+    }
+    const len = txt(h1s[0]).length;
+    if (len > 60) add("info", "H1 is " + len + " characters; titles over ~60 truncate in search results.", h1s[0]);
+    else if (len > 0 && len < 20) add("info", "H1 is only " + len + " characters; a more descriptive title usually performs better.", h1s[0]);
+  }
+
+  const headings = Array.from(editor.querySelectorAll("h1,h2,h3,h4,h5,h6"));
+  let prevLevel = 0;
+  const seen = new Map();
+  const slugUsed = new Set();          // dedupe state for the slugger
+  const slugSet = new Set();           // valid fragment targets
+  const slugSig = new Map();           // hyphen-collapsed signature -> slug
+  for (const h of headings) {
+    const level = +h.tagName[1];
+    const t = txt(h);
+    if (t) {
+      const slug = githubSlug(t, slugUsed);
+      slugSet.add(slug);
+      const sig = slug.replace(/-/g, "");
+      if (sig && !slugSig.has(sig)) slugSig.set(sig, slug);
+    }
+    if (!t) add("error", "Empty " + h.tagName + " heading.", h);
+    if (prevLevel && level > prevLevel + 1) {
+      add("warn", "Heading level skip: " + "H" + prevLevel + " \u2192 " + h.tagName +
+          " at \u201c" + t.slice(0, 40) + "\u201d.", h);
+    }
+    prevLevel = level;
+    const key = t.toLowerCase();
+    if (key) {
+      if (seen.has(key)) add("warn", "Duplicate heading text: \u201c" + t.slice(0, 40) + "\u201d.", h);
+      else seen.set(key, h);
+    }
+  }
+
+  // Empty sections: a heading immediately followed by another heading (or nothing)
+  const kids = Array.from(editor.children);
+  for (let i = 0; i < kids.length; i++) {
+    if (!/^H[1-6]$/.test(kids[i].tagName)) continue;
+    const next = kids[i + 1];
+    if (!next || /^H[1-6]$/.test(next.tagName)) {
+      add("warn", "Section \u201c" + txt(kids[i]).slice(0, 40) + "\u201d has no content.", kids[i]);
+    }
+  }
+
+  // --- Images ---
+  for (const img of editor.querySelectorAll("img")) {
+    const alt = (img.getAttribute("alt") || "").trim();
+    if (!alt) add("error", "Image without alt text (" + (img.getAttribute("src") || "").slice(0, 40) + ").", img);
+    else if (/\.(png|jpe?g|gif|svg|webp)\b/i.test(alt)) add("warn", "Alt text \u201c" + alt.slice(0, 40) + "\u201d looks like a filename.", img);
+  }
+
+  // --- Link anchors ---
+  for (const a of editor.querySelectorAll("a")) {
+    // Within-document fragment links: binary-truth check against the
+    // heading slug set. Cross-file fragments (page.md#x) are site-level
+    // and out of scope.
+    const href = a.getAttribute("href") || "";
+    if (href.startsWith("#") && href.length > 1) {
+      let frag = href.slice(1);
+      try { frag = decodeURIComponent(frag); } catch (e) {}
+      if (!slugSet.has(frag)) {
+        const sug = slugSig.get(frag.toLowerCase().replace(/-/g, ""));
+        add("warn", "Broken fragment link " + href + " (\u201c" + txt(a).slice(0, 30) +
+            "\u201d): no heading in this document has that anchor." +
+            (sug ? " Did you mean #" + sug + "?" : ""), a);
+      }
+    }
+    const t = txt(a).toLowerCase();
+    if (!t) { add("warn", "Link with empty anchor text.", a); continue; }
+    if (GENERIC_ANCHORS.has(t)) add("warn", "Generic anchor text \u201c" + t + "\u201d; descriptive anchors help both users and crawlers.", a);
+    else if (/^https?:\/\//.test(t)) add("info", "Bare URL as anchor text; consider descriptive link text.", a);
+  }
+
+  // --- Metadata (front matter) ---
+  if (!currentFront) {
+    add("info", "No front matter metadata; a title/description block helps search engines and site generators.");
+  } else {
+    if (fmValue(currentFront, "title") === null) add("info", "Front matter has no title: key.");
+    const desc = fmValue(currentFront, "description");
+    if (desc === null) {
+      add("info", "Front matter has no description: key.");
+    } else if (desc === "" && /^description\s*:\s*[>|][+-]?\s*$/mi.test(currentFront)) {
+      // Block indicator present but nothing indented under it: by YAML's
+      // rules the value IS empty (site generators will read it the same
+      // way), so teach the fix instead of reporting a baffling length.
+      add("warn", "description uses a block scalar (>- or |) but the text below it is not indented; YAML requires continuation lines to be indented (two spaces is conventional), otherwise the description is empty.");
+    } else if (desc.length < 50 || desc.length > 160) {
+      add("info", "description is " + desc.length + " characters; 50\u2013160 displays best in search snippets.");
+    }
+  }
+
+  // --- Content stats & readability (code excluded, same as the linter) ---
+  const { text } = collectLintText();
+  const words = text.split(/\s+/).filter(Boolean);
+  const sentences = text.split(/[.!?]+[\s\n]|\n\n/).map(s => s.trim()).filter(s => s.split(/\s+/).filter(Boolean).length >= 2);
+  const nW = words.length, nS = Math.max(1, sentences.length);
+  let syll = 0;
+  for (const w of words) syll += auditSyllables(w);
+  const flesch = nW ? Math.round(206.835 - 1.015 * (nW / nS) - 84.6 * (syll / nW)) : 0;
+  // Bands calibrate to the configured audience ([editor] audience).
+  // Technical: domain vocabulary legitimately depresses the score, so
+  // 40-59 reads as acceptable and the diagnostic fires below 40.
+  // General: conventional Flesch bands, diagnostic below 60. Either way
+  // the words/sentence stat says whether vocabulary or sentence length
+  // is responsible.
+  const technicalAudience = audiencePref !== "general";
+  const fleschLabel = technicalAudience
+    ? (flesch >= 80 ? "very easy" : flesch >= 60 ? "easy" :
+       flesch >= 40 ? "acceptable for technical prose" :
+       flesch >= 30 ? "difficult" : "very difficult")
+    : (flesch >= 90 ? "very easy" : flesch >= 80 ? "easy" :
+       flesch >= 70 ? "fairly easy" : flesch >= 60 ? "plain English" :
+       flesch >= 50 ? "fairly difficult" :
+       flesch >= 30 ? "difficult" : "very difficult");
+  const longSentences = sentences.filter(s => s.split(/\s+/).filter(Boolean).length > 25).length;
+
+  const fleschFloor = technicalAudience ? 40 : 60;
+  if (nW >= 100 && flesch < fleschFloor) {
+    add("info", "Flesch " + flesch + " is below the " +
+        (technicalAudience
+          ? "40\u201360 band for technical prose"
+          : "60\u201370 plain-English band for a general audience") +
+        ". Words/sentence is " + (nW / nS).toFixed(1) +
+        (nW / nS > 18
+          ? " \u2014 long sentences are contributing; consider splitting them."
+          : technicalAudience
+            ? " \u2014 sentence length is fine, so dense vocabulary is the cause; likely acceptable for a domain audience."
+            : " \u2014 sentence length is fine, so vocabulary is the cause; consider plainer word choices for a general audience."));
+  }
+
+  if (nW > 0 && nW < 300) add("info", "Thin content: " + nW + " words; search engines tend to favor 300+ for standalone pages.");
+  if (longSentences > 0 && longSentences / nS > 0.2) {
+    add("info", longSentences + " of " + nS + " sentences exceed 25 words; long sentences hurt readability scores.");
+  }
+  for (const pEl of editor.querySelectorAll("p")) {
+    const n = txt(pEl).split(/\s+/).filter(Boolean).length;
+    if (n > 150) add("warn", "Paragraph of " + n + " words (\u201c" + txt(pEl).slice(0, 40) + "\u2026\u201d); consider splitting.", pEl);
+  }
+
+  const stats = nW + " words \u00b7 " + nS + " sentences \u00b7 " +
+    (nW ? (nW / nS).toFixed(1) : "0") + " words/sentence" +
+    "\nFlesch " + flesch + " (" + fleschLabel + ")";
+  return { stats, findings };
+}
+
+function pulseElement(el) {
+  auditOverlay.textContent = "";
+  const r = document.createRange();
+  r.selectNode(el);
+  const base = pageWrap.getBoundingClientRect();
+  for (const rect of r.getClientRects()) {
+    if (!rect.width && !rect.height) continue;
+    const d = document.createElement("div");
+    d.className = "audit-hit";
+    d.style.left   = (rect.left - base.left - 2) + "px";
+    d.style.top    = (rect.top - base.top - 2) + "px";
+    d.style.width  = (rect.width + 4) + "px";
+    d.style.height = (rect.height + 4) + "px";
+    auditOverlay.appendChild(d);
+  }
+  const rect = r.getBoundingClientRect();
+  const ws = workspace.getBoundingClientRect();
+  if (rect.top < ws.top + 40 || rect.bottom > ws.bottom - 40) {
+    workspace.scrollTop += rect.top - (ws.top + workspace.clientHeight / 3);
+  }
+  setTimeout(() => { auditOverlay.textContent = ""; }, 2200);
+}
+
+// Shared results renderer for both audits: stats header + severity-sorted
+// clickable findings, one delegated locate-on-click listener.
+function showAuditResults(title, stats, findings) {
+  auditFindings = findings;
+  const order = { error: 0, warn: 1, info: 2 };
+  findings.sort((a, b) => order[a.sev] - order[b.sev]);
+  let body = '<p class="audit-stats">' + escHtml(stats) + "</p>";
+  if (!findings.length) {
+    body += '<p class="audit-none">\u2713 No issues found.</p>';
+  } else {
+    body += findings.map((f, i) =>
+      '<button class="audit-finding" data-i="' + i + '"' + (f.el ? "" : ' style="cursor:default"') + ">" +
+      '<span class="sev ' + f.sev + '">' + f.sev.toUpperCase() + "</span>" +
+      escHtml(f.message) + "</button>").join("");
+  }
+  showModal(title, body);
+  if (!showAuditResults._wired) {
+    showAuditResults._wired = true;
+    modalBody.addEventListener("click", (ev) => {
+      const row = ev.target.closest(".audit-finding");
+      if (!row) return;
+      const f = auditFindings[+row.dataset.i];
+      if (f && f.el && editor.contains(f.el)) {
+        closeModal();
+        pulseElement(f.el);
+      }
+    });
+  }
+}
+
+async function openAudit() {
+  closeMenus();
+  // Refresh the audience calibration each run: config edits apply on the
+  // next audit without restarting (same contract as Vale's styles).
+  try { audiencePref = (await appGetAudience()) || audiencePref; } catch (e) {}
+  const { stats, findings } = runAudit();
+  showAuditResults("SEO Audit \u2014 on-page checks", stats, findings);
+}
+
+/* ---------- Tools: Vale style (vendored) ----------
+   On-demand style checking via the vendored Vale binary (Audit menu).
+   Which style packages run comes from config.toml ([vale] styles, default
+   Google). The document's flattened plain text -- the same text Harper
+   and the audits use -- goes to the Go side; Vale's line/column findings
+   map back through the shared segment machinery to overlay marks (purple),
+   with messages shown in the status bar at the caret, like Harper. */
+
+let valeLints = [];   // { range, message, kind }
+
+async function runVale() {
+  closeMenus();
+  flash("Running Vale style check\u2026");
+  try {
+    const { segs, text, drops } = collectLintText();
+    const alerts = await appValeCheck(text);
+    const lineStarts = [0];
+    for (let i = 0; i < text.length; i++) {
+      if (text[i] === "\n") lineStarts.push(i + 1);
+    }
+    valeLints = [];
+    for (const a of alerts) {
+      const ls = lineStarts[a.line - 1];
+      if (ls === undefined) continue;
+      const s = ls + a.span[0] - 1;   // Vale spans: 1-based, end-inclusive
+      const e = ls + a.span[1];
+      if (!(e > s) || e > text.length || !segs.length) continue;
+      if (lintDropped(drops, s, e)) continue;
+      const i1 = findSeg(segs, s, false, 0);
+      const i2 = findSeg(segs, e, true, i1);
+      const sa = segs[i1], sb = segs[i2];
+      if (s < sa.start || s >= sa.start + sa.len) continue;
+      if (e <= sb.start || e > sb.start + sb.len) continue;
+      const r = document.createRange();
+      r.setStart(sa.node, s - sa.start);
+      r.setEnd(sb.node, e - sb.start);
+      valeLints.push({
+        range: r,
+        message: "[" + a.check + "] " + a.message,
+        kind: "Vale " + a.severity
+      });
+    }
+    paintLintOverlay();
+    if (valeLints.length) {
+      flash(valeLints.length + " style issue" + (valeLints.length === 1 ? "" : "s") +
+            " \u2014 place the caret in a purple mark to read it");
+    } else {
+      flash("\u2713 No style issues", "success");
+    }
+  } catch (e) {
+    valeLints = [];
+    paintLintOverlay();
+    flash("Vale: " + (e.message || e), true);
+  }
+}
+
+document.getElementById("tool-vale").addEventListener("click", runVale);
+
+/* ---------- Tools: AI readability check (GEO) ----------
+   Checks whether the document survives being CHUNKED AND RETRIEVED: RAG
+   pipelines typically split at heading boundaries, retrieve sections in
+   isolation, and label each chunk with its heading. So: section-level
+   token budgets, self-contained openings (no dangling "this/as mentioned
+   above"), descriptive headings, front-loaded key points, and defined
+   acronyms. Native heuristics over the same DOM the SEO audit walks. */
+
+const AI_OPENER_REFS = /^(it|they|this|that|these|those|such|additionally|also|however|furthermore|moreover|similarly|likewise|consequently|therefore|as (mentioned|noted|discussed|described|shown|stated)|the (above|following|former|latter))\b/i;
+const AI_GENERIC_HEADINGS = new Set([
+  "introduction", "intro", "overview", "background", "conclusion", "summary",
+  "notes", "note", "misc", "miscellaneous", "details", "more", "info",
+  "information", "about", "general", "other", "body", "content", "section"
+]);
+const AI_KNOWN_ACRONYMS = new Set([
+  "HTML", "HTTP", "HTTPS", "URL", "URI", "API", "JSON", "YAML", "XML", "CSS",
+  "PDF", "ID", "OK", "FAQ", "GFM", "SEO", "AI", "IT", "CLI", "GUI", "IDE",
+  "SDK", "CPU", "GPU", "RAM", "OS", "IO", "TODO", "NOTE", "README", "ASAP",
+  "USA", "UK", "EU", "PS", "USD", "UTC", "GMT"
+]);
+
+// Group top-level blocks into sections under their most recent heading,
+// mirroring how heading-boundary chunkers see the document.
+function sectionize() {
+  const sections = [];
+  let cur = null;
+  for (const el of editor.children) {
+    if (/^H[1-6]$/.test(el.tagName)) {
+      cur = { heading: el, title: (el.textContent || "").trim(), level: +el.tagName[1], els: [] };
+      sections.push(cur);
+    } else {
+      if (!cur) {
+        cur = { heading: null, title: "(before first heading)", level: 0, els: [] };
+        sections.push(cur);
+      }
+      cur.els.push(el);
+    }
+  }
+  for (const sec of sections) {
+    sec.text = sec.els.map(e => (e.textContent || "").trim()).filter(Boolean).join("\n");
+    sec.words = sec.text ? sec.text.split(/\s+/).filter(Boolean).length : 0;
+  }
+  return sections;
+}
+
+function runAiAudit() {
+  const findings = [];
+  const add = (sev, message, el) => findings.push({ sev, message, el: el || null });
+  const sections = sectionize();
+  const totalWords = sections.reduce((n, x) => n + x.words, 0);
+  const label = (t) => "\u201c" + t.slice(0, 40) + "\u201d";
+
+  // Structure: unheaded prose gets chunked arbitrarily.
+  if (totalWords > 400 && !sections.some(x => x.heading)) {
+    add("warn", "No headings in " + totalWords + " words: retrieval systems will chunk the document at arbitrary boundaries. Add section headings.");
+  }
+
+  for (const sec of sections) {
+    if (!sec.heading) continue;
+    const h = sec.heading;
+
+    // Chunk sizing (~1.3 tokens/word; retrieval chunks commonly ~300-500 tokens)
+    if (sec.words > 600) {
+      add("warn", "Section " + label(sec.title) + " is " + sec.words + " words (\u2248" + Math.round(sec.words * 1.3) + " tokens): far beyond a typical retrieval chunk; it will be split mid-thought. Break it up with subheadings.", h);
+    } else if (sec.words > 300) {
+      add("info", "Section " + label(sec.title) + " is " + sec.words + " words (\u2248" + Math.round(sec.words * 1.3) + " tokens); consider a subheading so retrieval chunks stay intact.", h);
+    }
+
+    // Descriptive headings: the heading IS the retrieved chunk's label.
+    const tokens = sec.title.split(/\s+/).filter(Boolean);
+    if (tokens.length === 1 && AI_GENERIC_HEADINGS.has(sec.title.toLowerCase())) {
+      add("info", "Generic heading " + label(sec.title) + ": retrieved chunks are labeled by their heading; a more specific title improves retrieval and answers.", h);
+    } else if (sec.title.length > 70) {
+      add("info", "Heading " + label(sec.title) + " is " + sec.title.length + " characters; long headings make poor chunk labels.", h);
+    }
+
+    if (!sec.text) continue;
+
+    // Self-containment: a chunk retrieved alone loses its antecedent.
+    if (AI_OPENER_REFS.test(sec.text)) {
+      add("warn", "Section " + label(sec.title) + " opens with an unresolved reference (\u201c" + sec.text.split(/\s+/).slice(0, 5).join(" ") + "\u2026\u201d); retrieved in isolation, the reader or model loses the antecedent. Name the subject in the first sentence.", h);
+    }
+
+    // Answer-first: front-load the key point.
+    const firstSentence = sec.text.split(/[.!?](\s|$)/)[0] || sec.text;
+    const fsWords = firstSentence.split(/\s+/).filter(Boolean).length;
+    if (fsWords > 35) {
+      add("info", "Section " + label(sec.title) + " opens with a " + fsWords + "-word sentence; front-loading the key point in a short first sentence helps retrieval answers.", h);
+    }
+  }
+
+  // Acronym definitions: a lone retrieved chunk cannot see a definition
+  // that lives in another section, but a doc-wide missing definition is
+  // the strongest (and least noisy) signal.
+  const allText = sections.map(x => x.text).join("\n");
+  const counts = {};
+  for (const m of allText.match(/\b[A-Z][A-Z0-9]{1,5}\b/g) || []) {
+    counts[m] = (counts[m] || 0) + 1;
+  }
+  let acronymFindings = 0;
+  for (const ac of Object.keys(counts)) {
+    if (acronymFindings >= 5) break;
+    if (counts[ac] < 3 || AI_KNOWN_ACRONYMS.has(ac)) continue;
+    const defined = new RegExp("\\(" + ac + "\\)|" + ac + "\\s*\\(").test(allText);
+    if (!defined) {
+      add("info", "Acronym " + ac + " appears " + counts[ac] + " times but is never spelled out; define it at first use (\u201cFull Name (" + ac + ")\u201d).");
+      acronymFindings++;
+    }
+  }
+
+  const headed = sections.filter(x => x.heading);
+  const wordCounts = headed.map(x => x.words).sort((a, b) => a - b);
+  const median = wordCounts.length ? wordCounts[Math.floor(wordCounts.length / 2)] : 0;
+  const largest = headed.reduce((best, x) => (x.words > (best ? best.words : -1) ? x : best), null);
+  const stats = headed.length + " sections \u00b7 median " + median + " words/section" +
+    (largest ? "\nlargest: " + label(largest.title) + " at " + largest.words + " words (\u2248" + Math.round(largest.words * 1.3) + " tokens)" : "");
+  return { stats, findings };
+}
+
+function openAiAudit() {
+  closeMenus();
+  const { stats, findings } = runAiAudit();
+  showAuditResults("AI Readability", stats, findings);
+}
+
+document.getElementById("tool-audit").addEventListener("click", openAudit);
+document.getElementById("tool-ai-audit").addEventListener("click", openAiAudit);
+
+/* ---------- Tools: Tufte audit ----------
+   Structural and rhetorical checks drawn from Tufte's writing (chiefly
+   The Cognitive Style of PowerPoint and Beautiful Evidence): prose over
+   bullet grunts, shallow hierarchy, sustained sections, restrained
+   emphasis, attributed evidence, integrated images. The visual half of
+   Tufte (typography, rules, chartjunk) is enforced by the stylesheet or
+   lives inside images, so it is out of audit scope -- stated honestly in
+   the results. Note the deliberate tension with the AI readability check:
+   Tufte optimizes for a sustained human reader, GEO for a fragmenting
+   retriever; the two lenses are separate menu items for that reason. */
+
+// A list item's own text, excluding any nested sublists.
+function liOwnText(li) {
+  let out = "";
+  for (const c of li.childNodes) {
+    if (c.nodeType === Node.TEXT_NODE) out += c.nodeValue;
+    else if (c.nodeType === Node.ELEMENT_NODE && !/^(UL|OL)$/.test(c.tagName)) out += c.textContent;
+  }
+  return out.trim();
+}
+
+function runTufteAudit() {
+  const findings = [];
+  const add = (sev, message, el) => findings.push({ sev, message, el: el || null });
+  const wc = (t) => t ? t.split(/\s+/).filter(Boolean).length : 0;
+  const label = (t) => "\u201c" + t.slice(0, 40) + "\u201d";
+
+  const { text: docText } = collectLintText();
+  const totalWords = wc(docText);
+  const sections = sectionize();
+  const headed = sections.filter(x => x.heading);
+
+  // --- Anti-bullet: grunts, density, list-only sections ---
+  const topLists = Array.from(editor.querySelectorAll("ul, ol"))
+    .filter(l => !l.parentElement.closest("li") && !l.querySelector(":scope > li > input[type=checkbox]"));
+  let gruntFindings = 0;
+  for (const list of topLists) {
+    const items = Array.from(list.children).filter(c => c.tagName === "LI");
+    if (items.length < 3) continue;
+    const frags = items.filter(li => {
+      const t = liOwnText(li);
+      return t && !/[.!?:;]$/.test(t);
+    });
+    if (frags.length / items.length >= 0.6 && gruntFindings < 4) {
+      gruntFindings++;
+      add("info", "List of " + items.length + " items, " + frags.length +
+          " are sentence fragments (\u201cgrunts\u201d, e.g. " + label(liOwnText(frags[0])) +
+          "); Tufte: prose sentences carry reasoning that fragments cannot.", list);
+    }
+  }
+
+  const nLis = Array.from(editor.querySelectorAll("li"))
+    .filter(li => !li.querySelector("input[type=checkbox]")).length;
+  const nPs = editor.querySelectorAll("p").length;
+  if (nLis >= 10 && nLis / (nLis + nPs) > 0.5) {
+    add("warn", Math.round(100 * nLis / (nLis + nPs)) +
+        "% of the document's blocks are list items \u2014 an outline wearing a document costume. Convert reasoning into connected prose.");
+  }
+
+  for (const sec of headed) {
+    const hasList = sec.els.some(e => /^(UL|OL)$/.test(e.tagName));
+    const hasProse = sec.els.some(e => e.tagName === "P" && wc(e.textContent) > 5);
+    if (hasList && !hasProse) {
+      add("info", "Section " + label(sec.title) + " is a bare list with no connecting prose.", sec.heading);
+    }
+  }
+
+  // --- Hierarchy: deep nesting, headings past H3 ---
+  const deepRoots = new Set();
+  for (const deep of editor.querySelectorAll("li li li")) {
+    let root = deep;
+    while (root.parentElement && root.parentElement !== editor) root = root.parentElement;
+    deepRoots.add(root);
+  }
+  for (const root of deepRoots) {
+    add("warn", "List nested three or more levels deep; deep hierarchy fragments reasoning (The Cognitive Style of PowerPoint).", root);
+  }
+
+  let deepHeads = 0;
+  for (const h of editor.querySelectorAll("h4, h5, h6")) {
+    if (deepHeads++ >= 5) break;
+    add("info", h.tagName + " " + label((h.textContent || "").trim()) +
+        " exceeds Tufte's three heading levels; consider flattening.", h);
+  }
+
+  // --- Fragmentation (deliberate tension with the AI readability check) ---
+  if (headed.length >= 5) {
+    const ws = headed.map(x => x.words).sort((a, b) => a - b);
+    const median = ws[Math.floor(ws.length / 2)];
+    if (median < 50) {
+      add("warn", headed.length + " sections with a median of only " + median +
+          " words: slide-deck structure. Tufte favors fewer, fuller sections of sustained prose. (Note: the AI readability check pulls the opposite way; these are different target readers.)");
+    }
+  }
+
+  // --- Emphasis restraint ---
+  let emphWords = 0;
+  for (const e of editor.querySelectorAll("strong, b, em, i")) {
+    if (e.closest("pre") || (e.parentElement && e.parentElement.closest("strong, b, em, i"))) continue;
+    emphWords += wc(e.textContent);
+  }
+  if (totalWords > 100 && emphWords / totalWords > 0.05) {
+    add("info", Math.round(100 * emphWords / totalWords) +
+        "% of words are bold or italic; when everything is emphasized, nothing is.");
+  }
+  let wholeBold = 0, capsRuns = 0;
+  for (const pEl of editor.querySelectorAll("p")) {
+    const t = (pEl.textContent || "").trim();
+    if (!t) continue;
+    if (wholeBold < 3 && wc(t) > 4) {
+      let boldText = "";
+      for (const b of pEl.querySelectorAll("strong, b")) boldText += b.textContent;
+      if (boldText.trim() === t) {
+        wholeBold++;
+        add("info", "Entire paragraph bolded (" + label(t) + "); emphasis is information \u2014 reserve it.", pEl);
+        continue;
+      }
+    }
+    // Caps check ignores inline code, where GET/PUT/HTTP tokens are at home.
+    const clone = pEl.cloneNode(true);
+    clone.querySelectorAll("code").forEach(c => c.remove());
+    const tNoCode = (clone.textContent || "").trim();
+    if (capsRuns < 3 && /(?:\b[A-Z]{2,}\b[ ,]+){2,}\b[A-Z]{2,}\b/.test(tNoCode)) {
+      capsRuns++;
+      add("info", "Run of ALL-CAPS words in " + label(tNoCode) + "; capitals read as shouting, not structure.", pEl);
+    }
+  }
+
+  // --- Attribution / provenance ---
+  let bqFindings = 0;
+  for (const bq of editor.querySelectorAll("blockquote")) {
+    if (bqFindings >= 3) break;
+    const t = bq.textContent || "";
+    const hasDash = /[\u2014\u2013]|--/.test(t);
+    const hasLink = !!bq.querySelector("a");
+    const next = bq.nextElementSibling;
+    const nextAttr = next && next.tagName === "P" &&
+      /^([\u2014\u2013]|--)/.test((next.textContent || "").trim());
+    if (!hasDash && !hasLink && !nextAttr) {
+      bqFindings++;
+      add("info", "Quotation " + label(t.trim()) + " has no visible attribution; evidence requires provenance.", bq);
+    }
+  }
+  const figureWords = (docText.match(/\b\d[\d.,%]*\b/g) || []).length;
+  if (figureWords >= 15 && editor.querySelectorAll("a").length === 0) {
+    add("info", "The document cites " + figureWords + " numeric figures but contains no links; sourced evidence is stronger evidence.");
+  }
+
+  // --- Evidence integration: images beside their prose ---
+  let imgFindings = 0;
+  for (const img of editor.querySelectorAll("img")) {
+    if (imgFindings >= 4) break;
+    let block = img;
+    while (block.parentElement && block.parentElement !== editor) block = block.parentElement;
+    const near = (el) => el && el.tagName === "P" && wc(el.textContent) > 10;
+    if (wc(block.textContent) > 10 || near(block.previousElementSibling) || near(block.nextElementSibling)) continue;
+    imgFindings++;
+    add("info", "Image without adjacent explanatory prose; words, numbers, and images belong together (Beautiful Evidence).", block);
+  }
+
+  const listPct = (nLis + nPs) ? Math.round(100 * nLis / (nLis + nPs)) : 0;
+  const emphPct = totalWords ? Math.round(100 * emphWords / totalWords) : 0;
+  const stats = totalWords + " words \u00b7 " + headed.length + " sections \u00b7 " +
+    listPct + "% list items \u00b7 " + emphPct + "% emphasized" +
+    "\nScope: structural & rhetorical checks only \u2014 chartjunk, data-ink, and sidenote discipline are not assessable from GFM.";
+  return { stats, findings };
+}
+
+function openTufteAudit() {
+  closeMenus();
+  const { stats, findings } = runTufteAudit();
+  showAuditResults("Tufte Audit", stats, findings);
+}
+
+document.getElementById("tool-tufte").addEventListener("click", openTufteAudit);
+
+/* ---------- Metadata editor (free-form front matter) ----------
+   Same division of labor as Component/Variable: the author supplies the
+   content, OpinEd supplies the delimiters (here, the --- fences). Content
+   is free-form -- key vocabulary belongs to the author's SSG, never the
+   editor -- and is carried verbatim; YAML syntax is the author's
+   responsibility (the SEO audit's title/description checks still apply).
+   Document-scoped, not caret-scoped: one block, at the top. Reachable
+   from Insert > Metadata and from the banner's "edit". */
+
+function openMetadataEditor() {
+  closeMenus();
+  // Split the verbatim block into fence lines + inner content so the
+  // dialog shows only the content. Fence style (--- vs ... terminator,
+  // CRLF endings) is captured and reused so an unrelated edit cannot
+  // change bytes it didn't touch; an unedited dialog is a strict no-op.
+  let openLine = "---", closeLine = "---", inner = "";
+  if (currentFront) {
+    const lines = currentFront.split("\n");
+    openLine = lines[0];
+    let ci = lines.length - 1;
+    while (ci > 0 && lines[ci] === "") ci--;
+    closeLine = lines[ci];
+    inner = lines.slice(1, ci).join("\n");
+  }
+  showModal("Document Metadata",
+    '<p class="audit-stats">Free-form YAML; OpinEd supplies the fences. ' +
+    'Content is preserved verbatim \u2014 syntax is the author\u2019s responsibility. ' +
+    'Clear all text to remove the metadata block.</p>' +
+    '<textarea id="fm-edit" class="fm-edit" spellcheck="false">' + escHtml(inner) + '</textarea>' +
+    '<div id="fm-err" class="fm-err" hidden></div>' +
+    '<div class="fm-edit-row"><button id="fm-apply">Apply</button></div>');
+  const ta = document.getElementById("fm-edit");
+  const applyBtn = document.getElementById("fm-apply");
+  const errBox = document.getElementById("fm-err");
+  let applyAnyway = false;
+  ta.addEventListener("input", () => {
+    applyAnyway = false;
+    applyBtn.textContent = "Apply";
+    errBox.hidden = true;
+  });
+  applyBtn.addEventListener("click", async () => {
+    const val = ta.value;
+    if (val === inner) { closeModal(); return; }   // untouched: strict no-op
+    // Parser-grade validation, advisory: an error shows in the dialog and
+    // the button becomes "Apply anyway" -- the author stays sovereign.
+    if (val.trim() && !applyAnyway) {
+      let err = "";
+      try { err = await appValidateYAML(val); } catch (e) { /* validator unavailable */ }
+      if (err) {
+        errBox.textContent = "YAML: " + err;
+        errBox.hidden = false;
+        applyBtn.textContent = "Apply anyway";
+        applyAnyway = true;
+        return;
+      }
+    }
+    if (!val.trim()) {
+      currentFront = "";
+    } else {
+      let v = val.replace(/\r\n?/g, "\n");
+      if (!v.endsWith("\n")) v += "\n";
+      currentFront = openLine + "\n" + v + closeLine + "\n";
+    }
+    updateFmBanner();
+    closeModal();
+    if (currentPath) {
+      // Metadata edits are deliberate, confirmed acts: write the file now.
+      // doSave flashes the saved path and clears dirty/recovery itself.
+      await doSave(false);
+    } else {
+      // Untitled: nothing to silently save to. Keep it dirty, snapshot to
+      // the recovery file immediately, and say what will happen.
+      markDirty();
+      autosaveNow();
+      flash("Metadata set \u2014 written to the file on first Save", "success");
+    }
+  });
+  ta.focus();
+}
+
+document.getElementById("fm-view").addEventListener("click", openMetadataEditor);
+document.getElementById("insert-metadata").addEventListener("click", openMetadataEditor);
+
+/* ---------- Opaque component editor ----------
+   The read-only region's raw dialog: same custody pattern as metadata.
+   The textarea holds the ENTIRE span, fences included (unlike metadata,
+   the fences here are part of the verbatim guarantee). Apply saves the
+   document; clearing all text deletes the block. */
+
+function openOpaqueEditor(el) {
+  const original = el.textContent;
+  showModal("Raw Component \u2014 " + (el.dataset.name || "component"),
+    '<p class="audit-stats">Verbatim region (fences included): preserved byte-for-byte, ' +
+    'shown as source, excluded from checkers. Clear all text to delete the block.</p>' +
+    '<textarea id="opq-edit" class="fm-edit" spellcheck="false">' + escHtml(original) + '</textarea>' +
+    '<div class="fm-edit-row"><button id="opq-apply">Apply</button></div>');
+  const ta = document.getElementById("opq-edit");
+  document.getElementById("opq-apply").addEventListener("click", async () => {
+    const val = ta.value;
+    if (val === original) { closeModal(); return; }   // untouched: no-op
+    if (!val.trim()) {
+      el.remove();
+      flash("Component block removed");
+    } else {
+      el.textContent = val;
+    }
+    closeModal();
+    if (currentPath) {
+      await doSave(false);
+    } else {
+      markDirty();
+      autosaveNow();
+      flash("Component updated \u2014 written to the file on first Save", "success");
+    }
+  });
+  ta.focus();
+}
+
+editor.addEventListener("click", (ev) => {
+  const op = ev.target.closest(".opaque-sc");
+  if (op && editor.contains(op)) openOpaqueEditor(op);
+});
+
+/* ---------- Notes (margin annotations) ----------
+   Annotations associated with, but never part of, the document. Sidecar:
+   <sourceName>-notes.md beside the source -- itself valid GFM: one
+   "## <anchor>" per note (an anchor is "#heading-slug" or "general"),
+   note text beneath. Anchoring is by heading slug (the ratified
+   heading-only link model); a note whose heading vanished shows flagged
+   as unanchored rather than guessed at. Display is the Tufte margin:
+   cards in a right gutter top-aligned to their headings (stacked on
+   collision), a small badge at each annotated heading; all overlay, the
+   document DOM untouched. Note edits never touch the document dirty
+   flag -- the sidecar persists on its own (immediately when the document
+   has a path, on first Save otherwise). */
+
+const notesOverlay = document.getElementById("notes-overlay");
+let docNotes = [];        // [{ anchor, text }] in sidecar order
+let notesVisible = false;  // margin cards shown only via the notes button; badges always paint
+
+function parseNotes(raw) {
+  const notes = [];
+  let cur = null;
+  for (const line of raw.split("\n")) {
+    const m = line.match(/^##\s+(.+?)\s*$/);
+    if (m) {
+      if (cur) notes.push(cur);
+      cur = { anchor: m[1], lines: [] };
+    } else if (cur) {
+      cur.lines.push(line);
+    } // preamble (# Notes: ... header) ignored
+  }
+  if (cur) notes.push(cur);
+  return notes
+    .map(n => ({ anchor: n.anchor, text: n.lines.join("\n").trim() }))
+    .filter(n => n.text);
+}
+
+function serializeNotes() {
+  const base = currentPath ? currentPath.split("/").pop() : "untitled";
+  return "# Notes: " + base + "\n\n" +
+    docNotes.map(n => "## " + n.anchor + "\n\n" + n.text + "\n").join("\n");
+}
+
+async function loadNotes() {
+  docNotes = [];
+  if (currentPath) {
+    try { docNotes = parseNotes((await appLoadNotes(currentPath)) || ""); }
+    catch (e) { /* absent or unreadable: no notes */ }
+  }
+  paintNotes();
+}
+
+function persistNotes() {
+  if (!currentPath) return; // held in memory; written on first Save
+  try { appSaveNotes(currentPath, docNotes.length ? serializeNotes() : ""); }
+  catch (e) { /* best-effort */ }
+}
+
+// Ordered slug -> heading element map (same slugger the audits use).
+function headingSlugMap() {
+  const used = new Set();
+  const map = new Map();
+  for (const h of editor.querySelectorAll("h1,h2,h3,h4,h5,h6")) {
+    const t = (h.textContent || "").trim();
+    if (t) map.set(githubSlug(t, used), h);
+  }
+  return map;
+}
+
+function paintNotes() {
+  notesOverlay.textContent = "";
+  // Layout first, measurement second: the class shifts the sheet left.
+  document.body.classList.toggle("notes-margin", notesVisible && docNotes.length > 0);
+  if (!docNotes.length) return;
+  const base = pageWrap.getBoundingClientRect();
+  const edRect = editor.getBoundingClientRect();
+  const gutterLeft = edRect.right - base.left + 14;
+  let cornerBadgeTop = edRect.top - base.top + 8; // stack for heading-less notes
+  const slugs = headingSlugMap();
+  const frag = document.createDocumentFragment();
+  // Order: general first, anchored by heading position, orphans last.
+  const entries = docNotes.map((n, i) => {
+    let target = null, orphan = false;
+    if (n.anchor !== "general") {
+      target = slugs.get(n.anchor.replace(/^#/, "")) || null;
+      orphan = !target;
+    }
+    const ideal = target ? target.getBoundingClientRect().top - base.top
+                : orphan ? editor.scrollHeight : 0;
+    return { n, i, target, orphan, ideal };
+  }).sort((a, b) => a.ideal - b.ideal);
+  let lastBottom = 0;
+  const badged = new Set();
+  for (const e of entries) {
+    const card = document.createElement("div");
+    card.className = "note-card" + (e.orphan ? " orphan" : "");
+    card.dataset.i = e.i;
+    const label = document.createElement("span");
+    label.className = "note-anchor";
+    label.textContent = e.orphan ? e.n.anchor + " (unanchored)" : e.n.anchor;
+    card.appendChild(label);
+    card.appendChild(document.createTextNode(e.n.text));
+    card.style.top = "0px";
+    card.style.left = gutterLeft + "px";
+    if (notesVisible) frag.appendChild(card);
+    if (e.target && !badged.has(e.target)) {
+      badged.add(e.target);
+      const r = e.target.getBoundingClientRect();
+      const b = document.createElement("span");
+      b.className = "note-badge";
+      b.textContent = "\u25c9";
+      b.title = "This section has a note \u2014 click to open (visible even when the margin is hidden)";
+      b.dataset.i = e.i;
+      b.style.left = (r.right - base.left + 6) + "px";
+      b.style.top = (r.top - base.top + 2) + "px";
+      frag.appendChild(b);
+    } else if (!e.target) {
+      // Heading-less notes (general, or orphaned by a vanished heading)
+      // still need an indicator: stacked at the sheet's top-right corner.
+      const b = document.createElement("span");
+      b.className = "note-badge" + (e.orphan ? " orphan" : "");
+      b.textContent = "\u25c9";
+      b.title = e.orphan
+        ? "Unanchored note (its heading is gone) \u2014 click to open"
+        : "Document-level note \u2014 click to open";
+      b.dataset.i = e.i;
+      b.style.left = (edRect.right - base.left - 22) + "px";
+      b.style.top = cornerBadgeTop + "px";
+      cornerBadgeTop += 15;
+      frag.appendChild(b);
+    }
+    e.cardEl = card;
+  }
+  notesOverlay.appendChild(frag);
+  // Second pass (post-layout): real heights for collision stacking.
+  if (notesVisible) {
+    for (const e of entries) {
+      const top = Math.max(e.ideal, lastBottom);
+      e.cardEl.style.top = top + "px";
+      lastBottom = top + e.cardEl.offsetHeight + 8;
+    }
+  }
+}
+
+// Caret's section determines a new note's anchor.
+function caretNoteAnchor() {
+  const n = anchorElement();
+  if (!n) return "general";
+  let block = n;
+  while (block.parentElement && block.parentElement !== editor) block = block.parentElement;
+  const slugs = headingSlugMap();
+  const byEl = new Map();
+  for (const [slug, el] of slugs) byEl.set(el, slug);
+  let cur = block;
+  while (cur) {
+    if (byEl.has(cur)) return "#" + byEl.get(cur);
+    cur = cur.previousElementSibling;
+  }
+  return "general";
+}
+
+function openNoteEditor(idx, presetAnchor) {
+  const existing = idx !== null ? docNotes[idx] : null;
+  const anchor = existing ? existing.anchor : presetAnchor;
+  showModal("Note \u2014 " + anchor,
+    '<p class="audit-stats">Notes live beside the document, never inside it. ' +
+    'Clear all text to delete the note.</p>' +
+    '<textarea id="note-edit" class="fm-edit" spellcheck="false">' +
+    escHtml(existing ? existing.text : "") + '</textarea>' +
+    '<div class="fm-edit-row"><button id="note-apply">Apply</button></div>');
+  const ta = document.getElementById("note-edit");
+  document.getElementById("note-apply").addEventListener("click", () => {
+    const val = ta.value.trim();
+    if (existing && val === existing.text) { closeModal(); return; }
+    if (!val) {
+      if (idx !== null) docNotes.splice(idx, 1);
+    } else if (existing) {
+      existing.text = val;
+    } else {
+      docNotes.push({ anchor, text: val });
+    }
+    persistNotes();
+    paintNotes();
+    closeModal();
+    flash(currentPath ? "Note saved" : "Note held \u2014 written beside the file on first Save",
+          "success");
+  });
+  ta.focus();
+}
+
+notesOverlay.addEventListener("click", (ev) => {
+  const el = ev.target.closest(".note-card, .note-badge");
+  if (el) openNoteEditor(+el.dataset.i, null);
+});
+
+document.getElementById("insert-note").addEventListener("click", () => {
+  closeMenus();
+  openNoteEditor(null, caretNoteAnchor());
+});
+
+document.getElementById("btn-notes").addEventListener("click", () => {
+  notesVisible = !notesVisible;
+  paintNotes();
+  flash(notesVisible ? "Notes shown" : "Notes hidden");
+});
+
+// Heading positions shift as the document is edited.
+let notesRepaintTimer = null;
+editor.addEventListener("input", () => {
+  clearTimeout(notesRepaintTimer);
+  notesRepaintTimer = setTimeout(paintNotes, 400);
+});
+window.addEventListener("resize", () => paintNotes());
+
+/* ---------- Help menu & modal dialogs ---------- */
+
+const helpMenu      = document.getElementById("help-menu");
+const fileMenu      = document.getElementById("file-menu");
+const toolsMenu     = document.getElementById("tools-menu");
+const insertMenu    = document.getElementById("insert-menu");
+const modalBackdrop = document.getElementById("modal-backdrop");
+const modalTitle    = document.getElementById("modal-title");
+const modalBody     = document.getElementById("modal-body");
+
+function closeMenus() { fileMenu.hidden = true; helpMenu.hidden = true; toolsMenu.hidden = true; insertMenu.hidden = true; }
+
+// Opens the given menu (closing any other); closes it if already open.
+function toggleMenu(menu) {
+  const wasClosed = menu.hidden;
+  closeMenus();
+  menu.hidden = !wasClosed;
+}
+
+function showModal(title, bodyHtml) {
+  closeMenus();
+  modalTitle.textContent = title;
+  modalBody.innerHTML = bodyHtml; // static, trusted content only
+  modalBackdrop.hidden = false;
+  document.getElementById("modal-close").focus();
+}
+
+function closeModal() {
+  modalBackdrop.hidden = true;
+  editor.focus();
+}
+
+const SHORTCUTS_HTML =
+  '<table class="kbd-table">' +
+  '<tr><td><kbd>Ctrl+N</kbd></td><td>New document</td></tr>' +
+  '<tr><td><kbd>Ctrl+O</kbd></td><td>Open</td></tr>' +
+  '<tr><td><kbd>Ctrl+S</kbd></td><td>Save</td></tr>' +
+  '<tr><td><kbd>Ctrl+Shift+S</kbd></td><td>Save As</td></tr>' +
+  '<tr><td><kbd>Ctrl+Z</kbd></td><td>Undo (text and formatting; table/code-block structure edits and dialog changes are outside the undo history)</td></tr>' +
+  '<tr><td><kbd>Ctrl+Y</kbd> / <kbd>Ctrl+Shift+Z</kbd></td><td>Redo</td></tr>' +
+  '<tr><td><kbd>Ctrl+B</kbd> / <kbd>Ctrl+I</kbd></td><td>Bold / Italic</td></tr>' +
+  '<tr><td><kbd>Ctrl+Shift+X</kbd></td><td>Strikethrough</td></tr>' +
+  '<tr><td><kbd>Ctrl+E</kbd></td><td>Inline code (toggle)</td></tr>' +
+  '<tr><td><kbd>Ctrl+K</kbd></td><td>Insert link</td></tr>' +
+  '<tr><td><kbd>Ctrl+Click</kbd></td><td>Open link in browser</td></tr>' +
+  '<tr><td><kbd>Ctrl+R</kbd></td><td>Reload from file (discards unsaved changes)</td></tr>' +
+  '<tr><td><kbd>Ctrl+F</kbd></td><td>Find in document</td></tr>' +
+  '<tr><td><kbd>Enter</kbd> / <kbd>Shift+Enter</kbd></td><td>Next / previous match (in find bar)</td></tr>' +
+  '<tr><td><kbd>F3</kbd> / <kbd>Shift+F3</kbd></td><td>Next / previous match</td></tr>' +
+  '<tr><td><kbd>Ctrl+1</kbd> &hellip; <kbd>Ctrl+3</kbd></td><td>Heading level 1&ndash;3</td></tr>' +
+  '<tr><td><kbd>Ctrl+0</kbd></td><td>Paragraph (also exits blockquote/code block)</td></tr>' +
+  '<tr><td><kbd>Tab</kbd> / <kbd>Shift+Tab</kbd></td><td>Indent / outdent list item</td></tr>' +
+  '<tr><td><kbd>Shift+Enter</kbd></td><td>Hard line break</td></tr>' +
+  '<tr><td><kbd>F1</kbd></td><td>This dialog</td></tr>' +
+  "</table>";
+
+function showShortcuts() { showModal("Keyboard Shortcuts", SHORTCUTS_HTML); }
+
+async function showAbout() {
+  let version = "unknown";
+  try { version = await appVersion(); } catch (e) { /* leave as unknown */ }
+  showModal("About",
+    '<div class="about-name">OpinEd</div>' +
+    "<div>Version " + escHtml(version) + "</div>" +
+    '<p class="about-muted">A WYSIWYG editor for GitHub Flavored Markdown.<br>' +
+    "Files are read from and saved as plain GFM.</p>" +
+    '<p class="about-muted">Go &middot; goldmark &middot; html-to-markdown &middot; WebKitGTK</p>');
+}
+
+document.getElementById("btn-file").addEventListener("click", (ev) => {
+  ev.stopPropagation();          // keep the document-level close handler
+  toggleMenu(fileMenu);          // from immediately re-closing the menu
+});
+document.getElementById("btn-help").addEventListener("click", (ev) => {
+  ev.stopPropagation();
+  toggleMenu(helpMenu);
+});
+document.getElementById("btn-tools").addEventListener("click", (ev) => {
+  ev.stopPropagation();
+  toggleMenu(toolsMenu);
+});
+document.getElementById("tool-harper").addEventListener("click", () => toggleHarper());
+document.getElementById("help-shortcuts").addEventListener("click", showShortcuts);
+document.getElementById("help-about").addEventListener("click", showAbout);
+document.getElementById("modal-close").addEventListener("click", closeModal);
+modalBackdrop.addEventListener("click", (ev) => { if (ev.target === modalBackdrop) closeModal(); });
+document.addEventListener("click", closeMenus); // click elsewhere closes menus
+
+/* ---------- Special Characters (LibreOffice-style) ----------
+   A subset dropdown + character grid, generated from Unicode block ranges
+   (the same organization LibreOffice's Insert > Special Character uses).
+   Clicking a character closes the dialog and inserts it at the position
+   the cursor last occupied in the document (tracked continuously via
+   selectionchange, since opening the dialog moves focus). Insertion goes
+   through execCommand so it participates in undo and the dirty flag. */
+
+let lastEditorRange = null;   // last selection seen inside #editor
+let charmapBlockIdx = 1;      // remember the chosen subset (default Latin-1)
+
+const CHAR_BLOCKS = [
+  ["Basic Latin", 0x0021, 0x007E],
+  ["Latin-1 Supplement", 0x00A1, 0x00FF],
+  ["Latin Extended-A", 0x0100, 0x017F],
+  ["Latin Extended-B", 0x0180, 0x024F],
+  ["Greek and Coptic", 0x0386, 0x03FF],
+  ["Cyrillic", 0x0400, 0x04FF],
+  ["Hebrew", 0x05D0, 0x05EA],
+  ["Arabic", 0x0621, 0x064A],
+  ["General Punctuation", 0x2010, 0x205E],
+  ["Superscripts and Subscripts", 0x2070, 0x209C],
+  ["Currency Symbols", 0x20A0, 0x20BF],
+  ["Letterlike Symbols", 0x2100, 0x214F],
+  ["Number Forms", 0x2150, 0x218B],
+  ["Arrows", 0x2190, 0x21FF],
+  ["Mathematical Operators", 0x2200, 0x22FF],
+  ["Miscellaneous Technical", 0x2300, 0x23FF],
+  ["Box Drawing", 0x2500, 0x257F],
+  ["Geometric Shapes", 0x25A0, 0x25FF],
+  ["Miscellaneous Symbols", 0x2600, 0x26FF],
+  ["Dingbats", 0x2700, 0x27BF],
+  ["Emoticons", 0x1F600, 0x1F64F],
+  ["Symbols and Pictographs", 0x1F300, 0x1F3FF],
+];
+
+// Invisible/bidi-control code points that would be confusing to insert
+// blind from a picker (zero-width chars, joiners, direction overrides).
+function charmapSkip(cp) {
+  return (cp >= 0x200B && cp <= 0x200F) ||  // zero-width chars & marks
+         (cp >= 0x202A && cp <= 0x202E) ||  // bidi embedding/override controls
+         cp === 0x2028 || cp === 0x2029 ||  // line/paragraph separators
+         (cp >= 0x2060 && cp <= 0x206F) ||  // invisible operators/joiners
+         cp === 0x00AD;                     // soft hyphen
+}
+
+function renderCharGrid() {
+  const grid = document.getElementById("charmap-grid");
+  const [, from, to] = CHAR_BLOCKS[charmapBlockIdx];
+  let html = "";
+  for (let cp = from; cp <= to; cp++) {
+    if (charmapSkip(cp)) continue;
+    const ch = String.fromCodePoint(cp);
+    const hex = "U+" + cp.toString(16).toUpperCase().padStart(4, "0");
+    html += '<button data-c="' + escAttr(ch) + '" data-u="' + hex + '" title="' + hex + '">' +
+            escHtml(ch) + "</button>";
+  }
+  grid.innerHTML = html;
+}
+
+function insertSpecialChar(ch) {
+  editor.focus();
+  if (lastEditorRange) {
+    const sel = getSelection();
+    sel.removeAllRanges();
+    try { sel.addRange(lastEditorRange); }
+    catch (e) { /* stale range (document replaced); insert at focus caret */ }
+  }
+  document.execCommand("insertText", false, ch);
+  markDirty();
+}
+
+function openCharmap() {
+  const options = CHAR_BLOCKS
+    .map((b, i) => '<option value="' + i + '"' + (i === charmapBlockIdx ? " selected" : "") + ">" +
+                   escHtml(b[0]) + "</option>")
+    .join("");
+  showModal("Special Characters",
+    '<div class="charmap-top">' +
+      '<select id="charmap-block">' + options + "</select>" +
+      '<span id="charmap-info"></span>' +
+    "</div>" +
+    '<div id="charmap-grid"></div>');
+  const blockSel = document.getElementById("charmap-block");
+  const grid = document.getElementById("charmap-grid");
+  const info = document.getElementById("charmap-info");
+  blockSel.addEventListener("change", () => {
+    charmapBlockIdx = parseInt(blockSel.value, 10) || 0;
+    renderCharGrid();
+  });
+  grid.addEventListener("mouseover", (ev) => {
+    const b = ev.target.closest("button[data-c]");
+    if (b) info.textContent = b.dataset.u + "  " + b.dataset.c;
+  });
+  grid.addEventListener("click", (ev) => {
+    const b = ev.target.closest("button[data-c]");
+    if (!b) return;
+    const ch = b.dataset.c;
+    closeModal();
+    insertSpecialChar(ch);
+    flash("Inserted " + ch + " (" + b.dataset.u + ")");
+  });
+  renderCharGrid();
+  blockSel.focus();
+}
+
+document.getElementById("btn-charmap").addEventListener("click", openCharmap);
+
+/* ---------- Insert: shortcodes & variables (flavor-driven) ----------
+   config.toml declares the SSG FLAVOR only ([shortcodes] syntaxes);
+   shortcode and variable definitions live in the SSG, never here. The
+   Insert dialogs collect the text that goes BETWEEN the brackets and the
+   editor supplies the flavor's brackets (first configured flavor drives
+   insertion). What is inserted is ordinary text; preservation on save
+   comes from the stateless pattern protection in the Go pipeline, which
+   equally protects typed, pasted, and pre-existing notation. Keep
+   notation on one line and unformatted: bolding half a shortcode splits
+   it across nodes and it degrades to escaped text. */
+
+let scSyntaxes = ["hugo"];
+(async () => {
+  try { scSyntaxes = (await appGetShortcodeSyntaxes()) || ["hugo"]; } catch (e) {}
+  // "strict": native GFM only -- no notation layer exists, so the menu
+  // must not offer to insert one. (notationDelims falls back to hugo for
+  // unknown flavors; without this, Insert > Component under strict would
+  // wrap text in brackets the mode itself escapes on save.) Metadata is
+  // a separate tenant and stays.
+  if (scSyntaxes.includes("strict")) {
+    scSyntaxes = ["strict"];   // strict is exclusive; mirror Go normalization
+    document.getElementById("insert-shortcode").hidden = true;
+    document.getElementById("insert-variable").hidden = true;
+    document.getElementById("btn-insert").title = "Insert image, metadata preamble, or note";
+  }
+})();
+
+function shortcodeRegexList() {
+  // Brace-bounded interiors: multi-line notation matches (Hugo permits
+  // it), while braces fence any stray opener. Variables stay line-bound.
+  const out = [];
+  for (const s of scSyntaxes) {
+    if (s === "hugo") { out.push(/\{\{<[^{}]*?>\}\}/g, /\{\{%[^{}]*?%\}\}/g, /\{\{[^{}\n]*?\}\}/g); }
+    else if (s === "liquid") { out.push(/\{%[^{}]*?%\}/g, /\{\{[^{}\n]*?\}\}/g); }
+    else if (s === "params") { out.push(/\{\{[^{}\n]*?\}\}/g); } // legacy alias
+  }
+  return out;
+}
+
+// Replace recognized notation with equal-length spaces: checker findings
+// cannot land inside it, every other offset stays exact, and word counts
+// stop inflating. Used by the flattened-text collector.
+function blankShortcodes(text, ranges) {
+  for (const re of shortcodeRegexList()) {
+    text = text.replace(re, (m, offset) => {
+      if (ranges) ranges.push([offset, offset + m.length]);
+      // Newlines survive the blanking so line/column geometry (Vale's
+      // line numbers) is undisturbed by multi-line notation.
+      return m.replace(/[^\n]/g, " ");
+    });
+  }
+  return text;
+}
+
+// The first configured flavor's bracket pair for the given notation kind.
+function notationDelims(kind) {
+  const fam = scSyntaxes[0] || "hugo";
+  if (fam === "liquid") {
+    return kind === "variable" ? ["{{ ", " }}"] : ["{% ", " %}"];
+  }
+  return kind === "variable" ? ["{{ ", " }}"] : ["{{< ", " >}}"];
+}
+
+function insertNotation(kind) {
+  closeMenus();
+  const noun = kind === "variable" ? "Variable" : "Component";
+  const inner = prompt(noun + " (the text between the brackets):", "");
+  if (inner === null || !inner.trim()) return;
+  const [open, close] = notationDelims(kind);
+  let closer = "";
+  if (kind !== "variable") {
+    // Pairedness is not knowable from the opening tag (the SSG template
+    // decides), so it is author-signaled: offer the flavor-correct closing
+    // tag. Hugo closes {{< /name >}}; Liquid closes {% endname %} -- the
+    // end-prefix morphology, not a slash.
+    const name = inner.trim().split(/\s+/)[0].replace(/^\//, "");
+    const fam = scSyntaxes[0] || "hugo";
+    const closingTag = fam === "liquid"
+      ? "{% end" + name + " %}"
+      : "{{< /" + name + " >}}";
+    if (name && confirm("Paired component: also insert the closing tag " + closingTag + " ?")) {
+      closer = closingTag;
+    }
+  }
+  editor.focus();
+  if (lastEditorRange) {
+    const sel = getSelection();
+    sel.removeAllRanges();
+    try { sel.addRange(lastEditorRange); } catch (e) {}
+  }
+  document.execCommand("insertText", false, open + inner.trim() + close + closer);
+  if (closer) {
+    // Land the caret between the tags (same walk-back as the $1 landing).
+    const sel = getSelection();
+    for (let i = 0; i < closer.length; i++) sel.modify("move", "backward", "character");
+  }
+  markDirty();
+}
+
+/* ---------- unsaved-changes guard ---------- */
+
+// Returns true if it is safe to proceed with an action that replaces the
+// current document (New/Open). Shows a native Save / Don't Save / Cancel
+// dialog when there are unsaved changes.
+async function confirmDiscard() {
+  if (!dirty) return true;
+  let choice;
+  try {
+    choice = await appConfirmDiscard();
+  } catch (e) {
+    flash("Dialog failed: " + e, true);
+    return false; // fail safe: never silently discard
+  }
+  if (choice === "cancel") return false;
+  if (choice === "save") {
+    await doSave(false);
+    return !dirty; // still dirty => user cancelled the save dialog
+  }
+  try { appRecoveryClear(); } catch (e) {}
+  return true; // "discard"
+}
+
+/* ---------- content lifecycle ---------- */
+
+function resetContent(html) {
+  editor.innerHTML = html && html.trim() ? html : "<p><br></p>";
+  // goldmark renders task-list checkboxes disabled; make them interactive.
+  editor.querySelectorAll('input[type=checkbox]').forEach((cb) => {
+    cb.removeAttribute("disabled");
+    cb.setAttribute("contenteditable", "false");
+  });
+  lastEditorRange = null; // caret memory dies with the old document
+  // New document contents: ALL previous marks (Harper and Vale) point at
+  // dead nodes -- clear and repaint unconditionally, not only when the
+  // spelling checker happens to be on (stale Vale marks used to survive
+  // Reload whenever it was off).
+  if (typeof valeLints !== "undefined") {
+    valeLints = [];
+    harperLints = [];
+    paintLintOverlay();
+    if (harperEnabled) scheduleHarper(300);
+  }
+}
+
+/* ---------- file operations (bridged to Go) ---------- */
+
+// File > Exit: same unsaved-changes gate as New/Open (Save / Don't Save /
+// Cancel; explicit discard clears the recovery snapshot), then terminate.
+async function doExit() {
+  closeMenus();
+  if (!(await confirmDiscard())) return;
+  try { await appQuit(); } catch (e) { flash("Exit failed: " + e, true); }
+}
+
+async function doNew() {
+  if (!(await confirmDiscard())) return;
+  resetContent("");
+  currentPath = "";
+  currentFront = "";
+  docNotes = [];
+  paintNotes();
+  markClean();
+  flash("New document");
+  editor.focus();
+}
+
+async function doOpen() {
+  if (!(await confirmDiscard())) return;
+  try {
+    const doc = await appOpen();
+    if (!doc) return; // dialog cancelled
+    resetContent(doc.html);
+    currentPath = doc.path;
+    currentFront = doc.front || "";
+    markClean();
+    loadNotes();
+    flash("Opened");
+  } catch (e) {
+    flash("Open failed: " + e, true);
+  }
+  editor.focus();
+}
+
+async function doSave(saveAs) {
+  try {
+    const hadPath = !!currentPath;
+    const path = await appSave(editor.innerHTML, saveAs ? "" : currentPath, currentFront);
+    if (!path) return; // dialog cancelled
+    currentPath = path;
+    markClean();
+    if (!hadPath && docNotes.length) persistNotes(); // untitled notes land now
+    flash("\u2713 Saved " + path, "success");
+  } catch (e) {
+    flash("Save failed: " + e, true);
+  }
+  editor.focus();
+}
+
+// Reload the current file from disk. Deliberately does NOT pass through
+// confirmDiscard: the requirement is to re-read the source even with unsaved
+// changes, and the button/tooltip states that it discards them.
+async function doReload() {
+  if (!currentPath) { flash("No file to reload", true); return; }
+  try {
+    const doc = await appLoad(currentPath);
+    resetContent(doc.html);
+    currentFront = doc.front || "";
+    try { appRecoveryClear(); } catch (e) {}
+    markClean();
+    loadNotes();
+    flash("\u21bb Reloaded from " + doc.path, "success");
+  } catch (e) {
+    flash("Reload failed: " + e, true);
+  }
+  editor.focus();
+}
+
+/* ---------- autosave / crash recovery ---------- */
+
+// Every 30s, if the document is dirty and has changed since the last
+// snapshot, ship it to the recovery file. Failures are silently ignored
+// (retried next interval): autosave must never disturb editing.
+const AUTOSAVE_MS = 30000;
+let autosaveSig = "";
+async function autosaveNow() {
+  if (!dirty) return;
+  const sig = currentPath + "\u0000" + currentFront + "\u0000" + editor.innerHTML;
+  if (sig === autosaveSig) return;
+  try {
+    await appAutosave(editor.innerHTML, currentFront, currentPath);
+    autosaveSig = sig;
+  } catch (e) { /* best-effort */ }
+}
+setInterval(autosaveNow, AUTOSAVE_MS);
+
+/* ---------- wiring ---------- */
+
+editor.addEventListener("input", markDirty);
+
+// Paste as plain text so foreign markup can't leak into the document model.
+// Inside a code block, insertText would split the pre at every newline, so
+// multi-line pastes go in as a raw text node instead: one block, verbatim.
+editor.addEventListener("paste", (ev) => {
+  ev.preventDefault();
+  const text = (ev.clipboardData || window.clipboardData).getData("text/plain");
+  const n = anchorElement();
+  const pre = n && n.closest("pre");
+  if (pre && editor.contains(pre)) {
+    insertRawTextAtCaret(text.replace(/\r\n?/g, "\n"));
+    markDirty();
+    return;
+  }
+  document.execCommand("insertText", false, text);
+});
+
+document.getElementById("file-new").addEventListener("click", doNew);
+document.getElementById("file-open").addEventListener("click", doOpen);
+document.getElementById("file-save").addEventListener("click", () => doSave(false));
+document.getElementById("file-saveas").addEventListener("click", () => doSave(true));
+document.getElementById("file-exit").addEventListener("click", () => doExit());
+document.getElementById("btn-reload").addEventListener("click", doReload);
+
+document.getElementById("btn-quote").addEventListener("click", () => setBlock("blockquote"));
+document.getElementById("btn-codeblock").addEventListener("click", insertCodeBlock);
+document.getElementById("btn-hr").addEventListener("click", () => exec("insertHorizontalRule"));
+document.getElementById("btn-task").addEventListener("click", insertTaskList);
+document.getElementById("btn-code").addEventListener("click", toggleInlineCode);
+document.getElementById("btn-link").addEventListener("click", insertLink);
+document.getElementById("btn-insert").addEventListener("click", (ev) => {
+  ev.stopPropagation();
+  toggleMenu(insertMenu);
+});
+document.getElementById("insert-image").addEventListener("click", insertImage);
+document.getElementById("insert-shortcode").addEventListener("click", () => insertNotation("shortcode"));
+document.getElementById("insert-variable").addEventListener("click", () => insertNotation("variable"));
+document.getElementById("btn-table").addEventListener("click", tableInsert);
+document.getElementById("btn-row-add").addEventListener("click", tableRowAdd);
+document.getElementById("btn-row-del").addEventListener("click", tableRowDel);
+document.getElementById("btn-col-add").addEventListener("click", tableColAdd);
+document.getElementById("btn-col-del").addEventListener("click", tableColDel);
+
+document.querySelectorAll("#toolbar [data-cmd]").forEach((b) =>
+  b.addEventListener("click", () => exec(b.dataset.cmd)));
+
+blockSelect.addEventListener("change", () => setBlock(blockSelect.value));
+
+// Keep the block dropdown and table buttons in sync with the caret position,
+// and remember the last in-editor selection so dialogs (e.g. Special
+// Characters) can insert at the position the cursor last occupied even
+// after focus has moved to toolbar or dialog controls.
+document.addEventListener("selectionchange", () => {
+  const n = anchorElement();
+  if (!n) return;
+  const selNow = getSelection();
+  if (selNow.rangeCount) lastEditorRange = selNow.getRangeAt(0).cloneRange();
+  // Container blocks take precedence over the leaf blocks they wrap:
+  // goldmark renders "> text" as <blockquote><p>...</p></blockquote>, and
+  // the nearest-ancestor match would truthfully-but-unhelpfully report
+  // the inner Paragraph. Pre outranks blockquote (a code block quoted
+  // inside a blockquote still edits as code).
+  const container = n.closest("pre, blockquote");
+  const blk = container || n.closest("h1,h2,h3,h4,h5,h6,p");
+  blockSelect.value = blk ? blk.tagName.toLowerCase() : "p";
+  const inTable = !!n.closest("td,th");
+  document.querySelectorAll(".table-op").forEach((b) => (b.disabled = !inTable));
+});
+
+document.addEventListener("keydown", (ev) => {
+  if (ev.key === "Enter" && !ev.ctrlKey && !ev.metaKey) {
+    const n = anchorElement();
+    const pre = n && n.closest("pre");
+    if (pre && editor.contains(pre)) {
+      ev.preventDefault();
+      codeBlockEnter(pre);
+      return;
+    }
+  }
+  if (ev.key === "Escape") {
+    if (!modalBackdrop.hidden) { closeModal(); ev.preventDefault(); }
+    else if (!helpMenu.hidden || !fileMenu.hidden || !toolsMenu.hidden || !insertMenu.hidden) { closeMenus(); ev.preventDefault(); }
+    else if (!findbar.hidden) { closeFind(); ev.preventDefault(); }
+    return;
+  }
+  if (ev.key === "F3") {
+    ev.preventDefault();
+    if (findbar.hidden) openFind();
+    else gotoMatch(findIndex + (ev.shiftKey ? -1 : 1));
+    return;
+  }
+  if (ev.key === "F1") {
+    ev.preventDefault();
+    showShortcuts();
+    return;
+  }
+  if (!(ev.ctrlKey || ev.metaKey)) return;
+  const k = ev.key.toLowerCase();
+  let handled = true;
+  if (k === "s" && ev.shiftKey)      doSave(true);
+  else if (k === "s")                doSave(false);
+  else if (k === "o")                doOpen();
+  else if (k === "n")                doNew();
+  else if (k === "r")                doReload(); // also blocks WebKit page reload
+  else if (k === "f")                openFind();
+  else if (k === "b")                exec("bold");
+  else if (k === "i")                exec("italic");
+  else if (k === "x" && ev.shiftKey) exec("strikeThrough");
+  else if (k === "z" && ev.shiftKey) doUndoRedo("redo");
+  else if (k === "z")                doUndoRedo("undo");
+  else if (k === "y")                doUndoRedo("redo");
+  else if (k === "e")                toggleInlineCode();
+  else if (k === "k")                insertLink();
+  else if (k === "0")                setBlock("p");
+  else if (["1","2","3"].includes(k)) setBlock("h" + k); // Tufte ceiling: h3
+  else handled = false;
+  if (handled) ev.preventDefault();
+});
+
+/* ---------- startup ---------- */
+
+(async function init() {
+  resetContent("");
+  refreshStatus();
+  try {
+    // Recovery first: restored content is UNSAVED work and outranks the
+    // normal startup load (including a command-line file argument).
+    const rec = await appRecoveryResolve();
+    if (rec) {
+      resetContent(rec.html);
+      currentPath = rec.path || "";
+      currentFront = rec.front || "";
+      dirty = true;              // restored means not yet on disk
+      refreshStatus();
+      loadNotes();
+      flash("Recovered unsaved changes \u2014 remember to Save", "success");
+      editor.focus();
+      return;
+    }
+  } catch (e) { /* recovery is best-effort; fall through to normal load */ }
+  try {
+    const doc = await appInit();
+    if (doc) {
+      resetContent(doc.html);
+      currentPath = doc.path;
+      currentFront = doc.front || "";
+      markClean();
+      loadNotes();
+    }
+  } catch (e) {
+    flash(String(e), true);
+  }
+  editor.focus();
+})();
+</script>
+<script type="module">
+/* Harper bridge: loads the vendored ES modules (which SetHtml pages cannot;
+   hence the loopback asset server on the Go side). Exposes a single factory
+   on window and signals readiness; the classic script above owns all state. */
+try {
+  const mod = await import("/assets/harper/index.js");
+  const bin = await import("/assets/harper/binary.js");
+  window.HarperBridge = {
+    create: async () => {
+      let linter;
+      try {
+        linter = new mod.WorkerLinter({ binary: bin.binary });
+        await linter.setup();
+      } catch (e) {
+        // Blob module workers can be restricted; fall back to main thread.
+        linter = new mod.LocalLinter({ binary: bin.binary });
+        await linter.setup();
+      }
+      return linter;
+    }
+  };
+} catch (e) {
+  window.HarperBridge = { error: "vendored harper.js not found" };
+}
+window.dispatchEvent(new Event("harper-bridge-ready"));
+</script>
+</body>
+</html>

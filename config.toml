@@ -1,0 +1,29 @@
+# OpinEd configuration (user preferences).
+
+[vale]
+#styles = ["Google"]              # default
+styles = ["Google", "Microsoft", "OpinEd"]
+# Additional directory searched for style packages you author yourself
+# (each style is a subdirectory of Vale YAML rule files, named as listed
+# in styles above). Vendored styles win name collisions.
+extra_styles_path = "~/devel/projects/mdEditor/vale"
+
+[shortcodes]
+# SSG flavor. Declares which notation is preserved verbatim on open/save
+# and which brackets Insert > Shortcode / Variable wrap around your text.
+# Shortcode and variable definitions live in your SSG, not here.
+#   "hugo":   shortcodes {{< ... >}} / {{% ... %}}, variables {{ ... }}
+#   "liquid": tags {% ... %}, variables/output {{ ... }}
+syntaxes = ["hugo"]
+# Any paired component's entire span is automatically a verbatim region
+# (read-only source block, byte-preserved) -- no per-name setting needed.
+
+[editor]
+# Code block font size in integer pixels (default 11, range 8-24).
+# Some Linux systems render the monospace face with fake-bold stems
+# at 14px and above.
+code_font_size = 11
+
+# Target audience for the SEO audit's readability calibration:
+# "technical" (default) or "general".
+audience = "technical"
